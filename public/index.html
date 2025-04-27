@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
             padding: 20px;
             background-color: #f4f4f4;
         }
+
         .container {
             background-color: #fff;
             padding: 30px;
@@ -22,27 +24,34 @@
             max-width: 600px;
             text-align: center;
         }
+
         h1 {
             color: #333;
             margin-bottom: 20px;
         }
+
         .input-group {
             margin-bottom: 20px;
             text-align: left;
         }
+
         label {
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
             color: #555;
         }
-        input[type="text"], select {
+
+        input[type="text"],
+        select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            box-sizing: border-box; /* Include padding in width */
+            box-sizing: border-box;
+            /* Include padding in width */
         }
+
         button {
             background-color: #007bff;
             color: white;
@@ -53,31 +62,39 @@
             font-size: 16px;
             transition: background-color 0.3s ease;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
         #image-display {
             margin-top: 30px;
             border: 1px solid #ccc;
             border-radius: 4px;
             padding: 10px;
             background-color: #e9e9e9;
-            min-height: 200px; /* Give it some initial height */
+            min-height: 200px;
+            /* Give it some initial height */
             display: flex;
             justify-content: center;
             align-items: center;
         }
+
         #image-display img {
             max-width: 100%;
             height: auto;
-            display: none; /* Hide until image is loaded */
+            display: none;
+            /* Hide until image is loaded */
         }
-         #loading {
-            display: none; /* Hidden by default */
+
+        #loading {
+            display: none;
+            /* Hidden by default */
             color: #555;
-         }
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Generate AI Image</h1>
@@ -88,14 +105,19 @@
         <div class="input-group">
             <label for="model">Select Model:</label>
             <select id="model">
-                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">stable-diffusion-xl-base-1.0</option>
-                <option value="@cf/stabilityai/stable-diffusion-2-1">stable-diffusion-v1-5 (stable-diffusion-2-1)</option>
-                 <option value="@cf/bytedance/stable-diffusion-xl-lightning">stable-diffusion-xl-lightning</option>
-                 <option value="@cf/black-forest-labs/flux-1-schnell">flux-1-schnell</option>
-                 <option value="@cf/runwayml/stable-diffusion-v1-5-inpainting">stable-diffusion-v1-5-inpainting</option>
-                 <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">stable-diffusion-v1-5-img2img</option>
-                 <option value="@cf/lykon/dreamshaper-8-lcm">dreamshaper-8-lcm</option>
-                </select>
+                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
+                    stable-diffusion-xl-base-1.0</option>
+                <option value="@cf/stabilityai/stable-diffusion-2-1">
+                    stable-diffusion-v1-5 (stable-diffusion-2-1)</option>
+                <option value="@cf/bytedance/stable-diffusion-xl-lightning">
+                    stable-diffusion-xl-lightning</option>
+                <option value="@cf/black-forest-labs/flux-1-schnell">flux-1-schnell</option>
+                <option value="@cf/runwayml/stable-diffusion-v1-5-inpainting">
+                    stable-diffusion-v1-5-inpainting</option>
+                <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">
+                    stable-diffusion-v1-5-img2img</option>
+                <option value="@cf/lykon/dreamshaper-8-lcm">dreamshaper-8-lcm</option>
+            </select>
         </div>
         <button id="generate-btn">Generate Image</button>
         <div id="loading">Generating...</div>
@@ -129,14 +151,17 @@
 
             try {
                 // Replace with your Worker's URL and the correct endpoint
-                const workerUrl = 'https://ai-image-gen.pierrefouquet93.workers.dev/generate';
+                const workerUrl = '/generate'; // Changed to relative URL
 
                 const response = await fetch(workerUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ prompt: prompt, model: model }), // Pass model and prompt in body
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        model: model
+                    }), // Pass model and prompt in body
                 });
 
                 if (!response.ok) {
@@ -150,16 +175,17 @@
 
                 generatedImage.src = imageUrl;
                 generatedImage.style.display = 'block'; // Show the image
-                 imageDisplay.style.backgroundColor = 'transparent'; // Remove background once image is loaded
+                imageDisplay.style.backgroundColor = 'transparent'; // Remove background once image is loaded
 
             } catch (error) {
                 console.error('Error generating image:', error);
                 imageDisplay.innerHTML = `<p style="color: red;">Error generating image: ${error.message}</p>`;
-                 imageDisplay.style.backgroundColor = '#ffe9e9'; // Indicate error with background
+                imageDisplay.style.backgroundColor = '#ffe9e9'; // Indicate error with background
             } finally {
                 loadingIndicator.style.display = 'none'; // Hide loading indicator
             }
         });
     </script>
 </body>
+
 </html>
