@@ -6,5 +6,8 @@ upload_source_maps = true
 [ai]
 binding = "AI"
 
+[site]
+bucket = "./public"
+
 [observability]
 enabled = true
