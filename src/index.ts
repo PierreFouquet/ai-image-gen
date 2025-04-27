@@ -1,5 +1,5 @@
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/generate") {
@@ -15,19 +15,14 @@ export default {
 
       const selectedModel = imageModels[modelQuery] || imageModels.stable_diffusion_xl;
 
-      const response = await env.AI.run(
-        selectedModel,
-        inputs,
-      );
+      const response = await env.AI.run(selectedModel, inputs);
 
       return new Response(response, {
-        headers: {
-          "content-type": "image/png",
-        },
+        headers: { "content-type": "image/png" },
       });
     }
 
-    // Optional: serve the frontend HTML if they visit '/'
-    return new Response("Frontend page not found.", { status: 404 });
+    // Everything else (like "/") is handled by the static asset server automatically
+    return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
