@@ -1,14 +1,13 @@
 name = "ai-image-gen"
 main = "src/index.ts"
 compatibility_date = "2025-04-27" #  Set to today's date
+routes = [
+ { pattern = "https://ai-image-gen.pierrefouquet93.workers.dev/generate", custom_domain = true },
+ { pattern = "https://ai-image-gen.pierrefouquet93.workers.dev/*", custom_domain = true }
+]
 
 [ai]
 binding = "AI"
 
 [site]
 bucket = "./public"
-
-routes = [
- { pattern = "https://ai-image-gen.pierrefouquet93.workers.dev/generate", custom_domain = true },
- { pattern = "https://ai-image-gen.pierrefouquet93.workers.dev/*", custom_domain = true }
-]
