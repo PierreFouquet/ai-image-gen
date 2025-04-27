@@ -22,7 +22,7 @@ export default {
       });
     }
 
-    // Everything else (like "/") is handled by the static asset server automatically
+    // 🔥 Fallback to static file serving from /public
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
