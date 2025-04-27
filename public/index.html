@@ -41,7 +41,7 @@
       loading.style.display = 'block';
       resultImage.src = '';
 
-      const response = await fetch(`/generate?model=${model}&prompt=${encodeURIComponent(prompt)}`);
+      const response = await fetch(\`/generate?model=\${model}&prompt=\${encodeURIComponent(prompt)}\`);
       
       if (response.ok) {
         const blob = await response.blob();
