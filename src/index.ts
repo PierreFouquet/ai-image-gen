@@ -1,30 +1,28 @@
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const modelQuery = url.searchParams.get("model");
 
-    const inputs = {
-      prompt: "cyberpunk cat",
-    };
+    if (url.pathname === "/generate") {
+      const modelQuery = url.searchParams.get("model");
+      const promptQuery = url.searchParams.get("prompt") || "cyberpunk cat";
 
-    // Supported image generation models
-    const imageModels = {
-      stable_diffusion_v1_5: "@cf/stabilityai/stable-diffusion-2-1",
-      stable_diffusion_xl: "@cf/stabilityai/stable-diffusion-xl-base-1.0",
-    };
+      const inputs = { prompt: promptQuery };
 
-    // Fallback to stable diffusion XL if no model or invalid model is provided
-    const selectedModel = imageModels[modelQuery] || imageModels.stable_diffusion_xl;
+      const imageModels = {
+        stable_diffusion_v1_5: "@cf/stabilityai/stable-diffusion-2-1",
+        stable_diffusion_xl: "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+      };
 
-    const response = await env.AI.run(
-      selectedModel,
-      inputs,
-    );
+      const selectedModel = imageModels[modelQuery] || imageModels.stable_diffusion_xl;
 
-    return new Response(response, {
-      headers: {
-        "content-type": "image/png",
-      },
-    });
+      const response = await env.AI.run(selectedModel, inputs);
+
+      return new Response(response, {
+        headers: { "content-type": "image/png" },
+      });
+    }
+
+    // Everything else (like "/") is handled by the static asset server automatically
+    return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

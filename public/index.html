@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Image Generator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; background: #f0f0f0; }
+    select, button { font-size: 1rem; padding: 0.5rem; margin: 0.5rem 0; }
+    img { margin-top: 1rem; max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <h1>Generate an AI Image</h1>
+  <form id="imageForm">
+    <label for="modelSelect">Select a model:</label><br>
+    <select id="modelSelect">
+      <option value="stable_diffusion_v1_5">Stable Diffusion v1.5</option>
+      <option value="stable_diffusion_xl" selected>Stable Diffusion XL</option>
+    </select><br>
+    <label for="promptInput">Enter a prompt:</label><br>
+    <input type="text" id="promptInput" value="cyberpunk cat" style="width: 300px;"><br>
+    <button type="submit">Generate Image</button>
+  </form>
+
+  <div id="output">
+    <p id="loading" style="display:none;">Generating image...</p>
+    <img id="resultImage" />
+  </div>
+
+  <script>
+    const form = document.getElementById('imageForm');
+    const loading = document.getElementById('loading');
+    const resultImage = document.getElementById('resultImage');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const model = document.getElementById('modelSelect').value;
+      const prompt = document.getElementById('promptInput').value;
+
+      loading.style.display = 'block';
+      resultImage.src = '';
+
+      const response = await fetch(\`/generate?model=\${model}&prompt=\${encodeURIComponent(prompt)}\`);
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        resultImage.src = URL.createObjectURL(blob);
+      } else {
+        alert('Failed to generate image.');
+      }
+
+      loading.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
