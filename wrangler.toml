@@ -1,10 +1,6 @@
 name = "ai-image-gen"
 main = "src/index.ts"
 compatibility_date = "2025-04-27" #  Set to today's date
-routes = [
-  { pattern = "/generate", custom_domain = true },
-  { pattern = "/*", custom_domain = true }
-]
 
 [ai]
 binding = "AI"
