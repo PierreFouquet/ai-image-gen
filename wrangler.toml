@@ -1,6 +1,9 @@
 name = "ai-image-gen"
 main = "src/index.ts"
-compatibility_date = "2023-10-26" # Use an appropriate compatibility date
+compatibility_date = "2025-04-27" # Use an appropriate compatibility date
 
 [ai]
 binding = "AI" # This is the variable name used in your Worker code (env.AI)
+
+[site]
+bucket = "./public"
