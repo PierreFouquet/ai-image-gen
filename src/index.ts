@@ -1,16 +1,14 @@
-// Make sure you have this interface defined, or adjust as needed
 interface Env {
   AI: Ai;
-  ASSETS: Fetcher; // Note: This is the binding, not a function to call fetch on
+  ASSETS: Fetcher;
 }
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    console.log("Worker received request:", request.url, request.method); // Log every request
+    console.log("Worker received request:", request.url, request.method);
 
-    // Handle the POST request for image generation
     if (url.pathname === "/generate" && request.method === "POST") {
       console.log("Handling /generate POST request");
       try {
@@ -51,16 +49,19 @@ export default {
     }
 
     // --- Static Asset Serving ---
-    // If the request is not for /generate POST, Cloudflare will automatically
-    // try to serve the requested asset using the ASSETS binding.
-    // You typically don't need to explicitly call fetch on it here.
-    try {
-      console.log("Serving static asset:", request.url);
-      const response = await env.ASSETS.fetch(request);
-      return response;
-    } catch (e) {
-      console.error("Error fetching asset:", e);
-      return new Response("Internal Server Error", { status: 500 });
+    // Explicitly check if ASSETS binding is available
+    if (env.ASSETS) {
+      try {
+        console.log("Serving static asset via ASSETS:", request.url);
+        const response = await env.ASSETS.fetch(request);
+        return response;
+      } catch (e) {
+        console.error("Error fetching asset via ASSETS:", e);
+        return new Response("Internal Server Error", { status: 500 });
+      }
+    } else {
+      console.error("ASSETS binding not found!");
+      return new Response("Internal Server Error: ASSETS binding missing", { status: 500 });
     }
   },
 } satisfies ExportedHandler<Env>;
