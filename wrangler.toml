@@ -1,5 +1,5 @@
 name = "ai-image-gen"
-main = "src/index.ts"
+main = "index.ts"
 compatibility_date = "2025-04-28"
 
 [ai]
