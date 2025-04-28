@@ -7,6 +7,3 @@ binding = "AI"
 
 [site]
 bucket = "./public"
-
-[log]
-level = "debug" # Or "info", "warn", "error", "fatal"
