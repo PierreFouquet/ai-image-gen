@@ -1,4 +1,4 @@
-Interface Env {
+interface Env {
   AI: Ai;
   ASSETS: Fetcher;
 }
