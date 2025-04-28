@@ -30,12 +30,25 @@ export default {
         const inputs = { prompt: prompt };
 
         try {
-          const response = await env.AI.run(model, inputs);
-          console.log("AI response (raw):", response);
+          const aiResponse = await env.AI.run(model, inputs);
+          console.log("AI response (raw):", aiResponse);
 
-          return new Response(response, {
-            headers: { "content-type": "image/png" },
-          });
+          if (model === "@cf/black-forest-labs/flux-1-schnell" && aiResponse && typeof aiResponse.image === 'string') {
+            // Convert base64 to binary
+            const binaryString = atob(aiResponse.image);
+            const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
+            return new Response(img, {
+              headers: { 'Content-Type': 'image/jpeg' },
+            });
+          } else if (aiResponse instanceof ArrayBuffer) {
+            // Assuming other models return ArrayBuffer directly (like Stable Diffusion XL Base 1.0)
+            return new Response(aiResponse, {
+              headers: { 'Content-Type': 'image/png' },
+            });
+          } else {
+            console.error("Unexpected AI response format:", aiResponse);
+            return new Response("Error generating image: Unexpected response format", { status: 500 });
+          }
         } catch (aiError) {
           console.error("Error during AI.run:", aiError);
           const aiErrorMessage = aiError instanceof Error ? aiError.message : String(aiError);
