@@ -1,9 +1,12 @@
 name = "ai-image-gen"
 main = "src/index.ts"
-compatibility_date = "2025-04-27" #  Set to today's date
+compatibility_date = "2025-04-28"
 
 [ai]
 binding = "AI"
 
 [site]
 bucket = "./public"
+
+[log]
+level = "debug" # Or "info", "warn", "error", "fatal"
