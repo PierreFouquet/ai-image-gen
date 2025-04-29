@@ -50,6 +50,7 @@ export default {
         }
 
         try {
+          console.log("Inputs to AI.run:", inputs); // Added logging
           const aiResponse = await env.AI.run(model, inputs);
 
           if (model === "@cf/black-forest-labs/flux-1-schnell") {
