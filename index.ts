@@ -7,71 +7,53 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    console.log("Worker received request:", request.url, request.method);
-
     if (url.pathname === "/generate" && request.method === "POST") {
-      console.log("Handling /generate POST request");
       try {
         const { prompt, model } = await request.json<{ prompt?: string; model?: string }>();
-
-        console.log("Request body:", { prompt, model });
-
-        if (!prompt) {
-          console.error("Missing 'prompt' in request body");
-          return new Response("Missing 'prompt' in request body", { status: 400 });
-        }
-        if (!model) {
-          console.error("Missing 'model' in request body");
-          return new Response("Missing 'model' in request body", { status: 400 });
-        }
-
-        console.log(`Generating image with model: ${model}, prompt: "${prompt}"`);
-
         const inputs = { prompt: prompt };
 
         try {
           const aiResponse = await env.AI.run(model, inputs);
-          console.log("AI response (raw):", aiResponse);
 
-          if (model === "@cf/black-forest-labs/flux-1-schnell" && aiResponse && typeof aiResponse.image === 'string') {
-            // Convert base64 to binary
-            const binaryString = atob(aiResponse.image);
-            const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
-            return new Response(img, {
-              headers: { 'Content-Type': 'image/jpeg' },
-            });
+          if (model === "@cf/black-forest-labs/flux-1-schnell") {
+            try {
+              console.log("Flux 1 Schnell Response (JSON.stringify):", JSON.stringify(aiResponse, null, 2));
+            } catch (e) {
+              console.error("Error stringifying aiResponse:", e);
+              console.log("Flux 1 Schnell Response (typeof):", typeof aiResponse);
+            }
+
+            if (aiResponse && typeof aiResponse.image === 'string') {
+              const binaryString = atob(aiResponse.image);
+              const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
+              return new Response(img, { headers: { 'Content-Type': 'image/jpeg' } });
+            } else {
+              console.error("Unexpected Flux 1 Schnell response format:", aiResponse);
+              return new Response("Error generating image: Unexpected Flux 1 Schnell response format", { status: 500 });
+            }
           } else if (aiResponse instanceof ArrayBuffer) {
-            // Assuming other models return ArrayBuffer directly (like Stable Diffusion XL Base 1.0)
-            return new Response(aiResponse, {
-              headers: { 'Content-Type': 'image/png' },
-            });
+            return new Response(aiResponse, { headers: { 'Content-Type': 'image/png' } });
           } else {
             console.error("Unexpected AI response format:", aiResponse);
             return new Response("Error generating image: Unexpected response format", { status: 500 });
           }
         } catch (aiError) {
           console.error("Error during AI.run:", aiError);
-          const aiErrorMessage = aiError instanceof Error ? aiError.message : String(aiError);
-          return new Response(`Error generating image: ${aiErrorMessage}`, { status: 500 });
+          return new Response(`Error generating image: ${aiError}`, { status: 500 });
         }
       } catch (e) {
         console.error("Error during /generate handling:", e);
-        const errorMessage = e instanceof Error ? e.message : String(e);
-        return new Response(`Error generating image: ${errorMessage}`, { status: 500 });
+        return new Response(`Error generating image: ${e}`, { status: 500 });
       }
     }
 
-    // --- Static Asset Serving ---
     if (env.ASSETS) {
       try {
-        console.log("Serving static asset via ASSETS:", request.url);
         return await env.ASSETS.fetch(request);
       } catch (e) {
-        console.error("Error fetching asset via ASSETS:", e);
         return new Response("Internal Server Error", { status: 500 });
       }
     } else {
-      console.error("ASSETS binding is undefined!");
       return new Response("Internal Server Error: ASSETS binding missing", { status: 500 });
     }
   },
