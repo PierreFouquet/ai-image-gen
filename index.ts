@@ -1,7 +1,7 @@
 interface Env {
   AI: Ai;
   ASSETS: Fetcher;
-  IMAGE_STORE: KVNamespace; // Add KV binding
+  IMAGE_STORE: KVNamespace;
 }
 
 async function streamToArrayBuffer(stream: ReadableStream): Promise<ArrayBuffer> {
@@ -32,7 +32,6 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/upload" && request.method === "POST") {
-      // Handle Image Upload
       try {
         const formData = await request.formData();
         const imageFile = formData.get("image") as File;
@@ -42,7 +41,7 @@ export default {
         }
 
         const arrayBuffer = await imageFile.arrayBuffer();
-        const imageKey = crypto.randomUUID(); // Generate unique key
+        const imageKey = crypto.randomUUID();
         await env.IMAGE_STORE.put(imageKey, arrayBuffer);
 
         return new Response(JSON.stringify({ key: imageKey }), {
@@ -55,14 +54,17 @@ export default {
     }
 
     if (url.pathname === "/generate" && request.method === "POST") {
-      // Handle Image Generation
       try {
         const { prompt, model, imageKey } = await request.json<{
           prompt?: string;
           model?: string;
           imageKey?: string;
         }>();
-        const inputs: Record<string, any> = { prompt: prompt };
+        const inputs: Record<string, any> = {
+          prompt: prompt,
+          num_inference_steps: 30, // Default value - tune as needed
+          guidance_scale: 8,      // Default value - tune as needed
+        };
 
         if (!prompt) {
           return new Response("Missing 'prompt' in request body", { status: 400 });
@@ -81,10 +83,13 @@ export default {
             return new Response("Image not found in storage", { status: 404 });
           }
           imageData = storedImage;
-          inputs.image = imageData; // Pass ArrayBuffer to AI
+          inputs.image = imageData;
+          inputs.num_inference_steps = 50; // Higher for img2img/inpainting
+          inputs.guidance_scale = 7.5;
         }
 
         try {
+          console.log("Inputs to AI.run:", inputs); // Log the inputs
           const aiResponse = await env.AI.run(model, inputs);
 
           if (model === "@cf/black-forest-labs/flux-1-schnell") {
@@ -119,7 +124,6 @@ export default {
           console.error("Error during AI.run:", aiError);
           return new Response(`Error generating image: ${aiError}`, { status: 500 });
         } finally {
-          // Clean up the stored image after generation (optional)
           if (imageKey) {
             await env.IMAGE_STORE.delete(imageKey);
           }
