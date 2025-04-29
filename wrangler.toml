@@ -13,5 +13,5 @@ binding = "ASSETS"
 enabled = true
 
 kv_namespaces = [
-  { binding = "IMAGE_STORE", id = "??" }
+  { binding = "IMAGE_STORE", id = "92b9d3bfb8994d92b2e750f630911824" }
 ]
