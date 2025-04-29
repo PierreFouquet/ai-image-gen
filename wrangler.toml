@@ -11,3 +11,7 @@ binding = "ASSETS"
 
 [observability.logs]
 enabled = true
+
+kv_namespaces = [
+  { binding = "IMAGE_STORE", id = "??" }
+]
