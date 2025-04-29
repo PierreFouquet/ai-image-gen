@@ -32,8 +32,22 @@ export default {
 
     if (url.pathname === "/generate" && request.method === "POST") {
       try {
-        const { prompt, model } = await request.json<{ prompt?: string; model?: string }>();
-        const inputs = { prompt: prompt };
+        const { prompt, model, image } = await request.json<{ prompt?: string; model?: string; image?: string }>();
+        const inputs: Record<string, string> = { prompt: prompt };
+
+        if (!prompt) {
+          return new Response("Missing 'prompt' in request body", { status: 400 });
+        }
+        if (!model) {
+          return new Response("Missing 'model' in request body", { status: 400 });
+        }
+
+        if (model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
+          if (!image) {
+            return new Response("Missing 'image' in request body for this model", { status: 400 });
+          }
+          inputs.image = image; // Add image to inputs
+        }
 
         try {
           const aiResponse = await env.AI.run(model, inputs);
@@ -55,10 +69,9 @@ export default {
               return new Response("Error generating image: Unexpected Flux 1 Schnell response format", { status: 500 });
             }
           } else {
-            console.log("Response (typeof):", typeof aiResponse); // Log the type
+            console.log("Response (typeof):", typeof aiResponse);
 
             if (aiResponse instanceof ReadableStream) {
-              // Handle ReadableStream
               const arrayBuffer = await streamToArrayBuffer(aiResponse);
               return new Response(arrayBuffer, { headers: { 'Content-Type': 'image/png' } });
             } else {
