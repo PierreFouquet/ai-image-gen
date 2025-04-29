@@ -62,8 +62,8 @@ export default {
         }>();
         const inputs: Record<string, any> = {
           prompt: prompt,
-          num_inference_steps: 30, // Default value - tune as needed
-          guidance_scale: 8,      // Default value - tune as needed
+          num_inference_steps: 30,
+          guidance_scale: 8,
         };
 
         if (!prompt) {
@@ -83,13 +83,13 @@ export default {
             return new Response("Image not found in storage", { status: 404 });
           }
           imageData = storedImage;
-          inputs.image = imageData;
-          inputs.num_inference_steps = 50; // Higher for img2img/inpainting
+          inputs.image = imageData; // Assign the ArrayBuffer
+          inputs.num_inference_steps = 50;
           inputs.guidance_scale = 7.5;
         }
 
         try {
-          console.log("Inputs to AI.run:", inputs); // Log the inputs
+          console.log("Inputs to AI.run:", inputs);
           const aiResponse = await env.AI.run(model, inputs);
 
           if (model === "@cf/black-forest-labs/flux-1-schnell") {
@@ -122,7 +122,8 @@ export default {
           }
         } catch (aiError) {
           console.error("Error during AI.run:", aiError);
-          return new Response(`Error generating image: ${aiError}`, { status: 500 });
+          const aiErrorMessage = aiError instanceof Error ? aiError.message : String(aiError);
+          return new Response(`Error generating image: ${aiErrorMessage}`, { status: 500 });
         } finally {
           if (imageKey) {
             await env.IMAGE_STORE.delete(imageKey);
@@ -130,17 +131,21 @@ export default {
         }
       } catch (e) {
         console.error("Error during /generate handling:", e);
-        return new Response(`Error generating image: ${e}`, { status: 500 });
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        return new Response(`Error generating image: ${errorMessage}`, { status: 500 });
       }
     }
 
     if (env.ASSETS) {
       try {
+        console.log("Serving static asset via ASSETS:", request.url);
         return await env.ASSETS.fetch(request);
       } catch (e) {
+        console.error("Error fetching asset via ASSETS:", e);
         return new Response("Internal Server Error", { status: 500 });
       }
     } else {
+      console.error("ASSETS binding is undefined!");
       return new Response("Internal Server Error: ASSETS binding missing", { status: 500 });
     }
   },
