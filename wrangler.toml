@@ -8,3 +8,6 @@ binding = "AI"
 [assets]
 directory = "./public"
 binding = "ASSETS"
+
+[observability.logs]
+enabled = true
