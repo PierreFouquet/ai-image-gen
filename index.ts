@@ -3,6 +3,29 @@ interface Env {
   ASSETS: Fetcher;
 }
 
+async function streamToArrayBuffer(stream: ReadableStream): Promise<ArrayBuffer> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalLength = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    totalLength += value.length;
+  }
+
+  const combined = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return combined.buffer;
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -34,19 +57,13 @@ export default {
           } else {
             console.log("Response (typeof):", typeof aiResponse); // Log the type
 
-            if (typeof aiResponse === 'object' && aiResponse !== null && aiResponse.image) {
-              // Try to extract image from object
-              const image = aiResponse.image;
-              if (image instanceof ArrayBuffer) {
-                return new Response(image, { headers: { 'Content-Type': 'image/png' } });
-              } else {
-                console.error("Unexpected image property type:", typeof image);
-                console.log("Full aiResponse:", aiResponse); // Log the full response
-                return new Response("Error generating image: Unexpected image property type", { status: 500 });
-              }
+            if (aiResponse instanceof ReadableStream) {
+              // Handle ReadableStream
+              const arrayBuffer = await streamToArrayBuffer(aiResponse);
+              return new Response(arrayBuffer, { headers: { 'Content-Type': 'image/png' } });
             } else {
               console.error("Unexpected AI response format:", aiResponse);
-              console.log("Full aiResponse:", aiResponse); // Log the full response
+              console.log("Full aiResponse:", aiResponse);
               return new Response("Error generating image: Unexpected response format", { status: 500 });
             }
           }
