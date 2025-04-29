@@ -1,6 +1,7 @@
 interface Env {
   AI: Ai;
   ASSETS: Fetcher;
+  IMAGE_STORE: KVNamespace; // Add KV binding
 }
 
 async function streamToArrayBuffer(stream: ReadableStream): Promise<ArrayBuffer> {
@@ -30,10 +31,38 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    if (url.pathname === "/generate" && request.method === "POST") {
+    if (url.pathname === "/upload" && request.method === "POST") {
+      // Handle Image Upload
       try {
-        const { prompt, model, image } = await request.json<{ prompt?: string; model?: string; image?: string }>();
-        const inputs: Record<string, string> = { prompt: prompt };
+        const formData = await request.formData();
+        const imageFile = formData.get("image") as File;
+
+        if (!imageFile) {
+          return new Response("No image file provided", { status: 400 });
+        }
+
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const imageKey = crypto.randomUUID(); // Generate unique key
+        await env.IMAGE_STORE.put(imageKey, arrayBuffer);
+
+        return new Response(JSON.stringify({ key: imageKey }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (error) {
+        console.error("Error handling image upload:", error);
+        return new Response("Error uploading image", { status: 500 });
+      }
+    }
+
+    if (url.pathname === "/generate" && request.method === "POST") {
+      // Handle Image Generation
+      try {
+        const { prompt, model, imageKey } = await request.json<{
+          prompt?: string;
+          model?: string;
+          imageKey?: string;
+        }>();
+        const inputs: Record<string, any> = { prompt: prompt };
 
         if (!prompt) {
           return new Response("Missing 'prompt' in request body", { status: 400 });
@@ -42,15 +71,20 @@ export default {
           return new Response("Missing 'model' in request body", { status: 400 });
         }
 
+        let imageData: ArrayBuffer | null = null;
         if (model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
-          if (!image) {
-            return new Response("Missing 'image' in request body for this model", { status: 400 });
+          if (!imageKey) {
+            return new Response("Missing 'imageKey' in request body for this model", { status: 400 });
           }
-          inputs.image = image; // Add image to inputs
+          const storedImage = await env.IMAGE_STORE.get(imageKey, { type: "arrayBuffer" });
+          if (!storedImage) {
+            return new Response("Image not found in storage", { status: 404 });
+          }
+          imageData = storedImage;
+          inputs.image = imageData; // Pass ArrayBuffer to AI
         }
 
         try {
-          console.log("Inputs to AI.run:", inputs); // Added logging
           const aiResponse = await env.AI.run(model, inputs);
 
           if (model === "@cf/black-forest-labs/flux-1-schnell") {
@@ -84,6 +118,11 @@ export default {
         } catch (aiError) {
           console.error("Error during AI.run:", aiError);
           return new Response(`Error generating image: ${aiError}`, { status: 500 });
+        } finally {
+          // Clean up the stored image after generation (optional)
+          if (imageKey) {
+            await env.IMAGE_STORE.delete(imageKey);
+          }
         }
       } catch (e) {
         console.error("Error during /generate handling:", e);
