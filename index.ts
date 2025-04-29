@@ -44,6 +44,8 @@ export default {
         const imageKey = crypto.randomUUID();
         await env.IMAGE_STORE.put(imageKey, arrayBuffer);
 
+        console.log(`/upload: Image stored in KV with key: ${imageKey}, size: ${arrayBuffer.byteLength} bytes`);
+
         return new Response(JSON.stringify({ key: imageKey }), {
           headers: { "Content-Type": "application/json" },
         });
@@ -78,18 +80,22 @@ export default {
           if (!imageKey) {
             return new Response("Missing 'imageKey' in request body for this model", { status: 400 });
           }
+          console.log(`/generate: Retrieving image from KV with key: ${imageKey}`);
           const storedImage = await env.IMAGE_STORE.get(imageKey, { type: "arrayBuffer" });
+          console.log(`/generate: storedImage:`, storedImage); // Log storedImage
+
           if (!storedImage) {
             return new Response("Image not found in storage", { status: 404 });
           }
           imageData = storedImage;
-          inputs.image = imageData; // Assign the ArrayBuffer
+          console.log(`/generate: imageData:`, imageData); // Log imageData
+          inputs.image = imageData;
           inputs.num_inference_steps = 50;
           inputs.guidance_scale = 7.5;
         }
 
+        console.log("/generate: Inputs to AI.run:", inputs);
         try {
-          console.log("Inputs to AI.run:", inputs);
           const aiResponse = await env.AI.run(model, inputs);
 
           if (model === "@cf/black-forest-labs/flux-1-schnell") {
