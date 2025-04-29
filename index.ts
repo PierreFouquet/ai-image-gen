@@ -31,11 +31,14 @@ export default {
               console.error("Unexpected Flux 1 Schnell response format:", aiResponse);
               return new Response("Error generating image: Unexpected Flux 1 Schnell response format", { status: 500 });
             }
-          } else if (aiResponse instanceof ArrayBuffer) {
-            return new Response(aiResponse, { headers: { 'Content-Type': 'image/png' } });
-          } else {
-            console.error("Unexpected AI response format:", aiResponse);
-            return new Response("Error generating image: Unexpected response format", { status: 500 });
+          } else { // Changed from 'else if' to 'else'
+            console.log("Response (typeof):", typeof aiResponse); // Added logging
+            if (aiResponse instanceof ArrayBuffer) {
+              return new Response(aiResponse, { headers: { 'Content-Type': 'image/png' } });
+            } else {
+              console.error("Unexpected AI response format:", aiResponse);
+              return new Response("Error generating image: Unexpected response format", { status: 500 });
+            }
           }
         } catch (aiError) {
           console.error("Error during AI.run:", aiError);
