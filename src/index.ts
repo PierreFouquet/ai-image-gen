@@ -108,7 +108,7 @@ export default {
 
                 if (
                     safeModel === "@cf/runwayml/stable-diffusion-v1-5-img2img" ||
-                    safeModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting"
+                    safeModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting"
                 ) {
                     if (!imageKey) {
                         return new Response(
@@ -130,7 +130,7 @@ export default {
                         inputs.num_inference_steps = 50;
                         inputs.guidance_scale = 7.5;
 
-                        if (safeModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
+                        if (safeModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting") {
                             if (!maskKey) {
                                 return new Response(
                                     "Missing 'maskKey' in request body for inpainting model",
