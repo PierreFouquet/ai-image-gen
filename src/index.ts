@@ -66,7 +66,7 @@ export default {
                     `/upload: Image stored in KV with key: ${imageKey}, size: ${arrayBuffer.byteLength} bytes`
                 );
                 return new Response(JSON.stringify({ key: imageKey }), {
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
                 });
             } catch (error) {
                 console.error("Error handling image upload:", error);
@@ -196,3 +196,19 @@ export default {
                 });
             }
         }
+
+        if (env.ASSETS) {
+            try {
+                return await env.ASSETS.fetch(request);
+            } catch (e) {
+                console.error("Error fetching asset via ASSETS:", e);
+                return new Response("Internal Server Error", { status: 500 });
+            }
+        } else {
+            console.error("ASSETS binding is undefined!");
+            return new Response("Internal Server Error: ASSETS binding missing", {
+                status: 500,
+            });
+        }
+    },
+} satisfies ExportedHandler<Env>;
