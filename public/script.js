@@ -22,6 +22,7 @@ const imageDisplay = document.getElementById('image-display');
 const generatedImage = document.getElementById('generated-image');
 const loadingIndicator = document.getElementById('loading');
 const previousImagesContainer = document.getElementById('previous-images');
+const errorMessage = document.getElementById('error-message');  // Get error message element
 
 let currentImageKey = null;
 let currentMaskKey = null;
@@ -149,6 +150,7 @@ generateBtn.addEventListener('click', async () => {
             generatedImage.onload = () => {
                 generatedImage.style.display = 'block';
                 loadingIndicator.style.display = 'none'; // Hide loading text
+                errorMessage.style.display = 'none';  // Hide error message on success
 
                 // Add the newly generated image to the previous images section
                 const img = document.createElement('img');
@@ -164,6 +166,8 @@ generateBtn.addEventListener('click', async () => {
         console.error('Error generating image:', err);
         alert('Error generating image. Please try again.');
         loadingIndicator.style.display = 'none';
+        errorMessage.textContent = `Error: ${err.message}`;
+        errorMessage.style.display = 'block';
     }
 });
 
