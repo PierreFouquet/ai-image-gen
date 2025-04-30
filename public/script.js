@@ -131,7 +131,7 @@ generateBtn.addEventListener('click', async () => {
     }
 
     generatedImage.style.display = 'none'; // Hide previously generated image
-    loadingText.style.display = 'block'; // Show loading text
+    loadingIndicator.style.display = 'block'; // Show loading text
 
     try {
         const response = await fetch('/generate', {
@@ -148,13 +148,13 @@ generateBtn.addEventListener('click', async () => {
             generatedImage.src = data.imageUrl;
             generatedImage.onload = () => {
                 generatedImage.style.display = 'block';
-                loadingText.style.display = 'none'; // Hide loading text
+                loadingIndicator.style.display = 'none'; // Hide loading text
             };
         }
     } catch (err) {
         console.error('Error generating image:', err);
         alert('Error generating image. Please try again.');
-        loadingText.style.display = 'none';
+        loadingIndicator.style.display = 'none';
     }
 });
 
