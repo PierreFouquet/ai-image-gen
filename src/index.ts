@@ -53,7 +53,25 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/upload" && request.method === "POST") {
-      // ... (upload logic remains the same) ...
+      try {
+        const formData = await request.formData();
+        const imageFile = formData.get("image") as File;
+        if (!imageFile) {
+          return new Response("No image file provided", { status: 400 });
+        }
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const imageKey = crypto.randomUUID();
+        await env.IMAGE_STORE.put(imageKey, arrayBuffer);
+        console.log(
+          `/upload: Image stored in KV with key: ${imageKey}, size: ${arrayBuffer.byteLength} bytes`
+        );
+        return new Response(JSON.stringify({ key: imageKey }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (error) {
+        console.error("Error handling image upload:", error);
+        return new Response("Error uploading image", { status: 500 });
+      }
     }
 
     if (url.pathname === "/generate" && request.method === "POST") {
@@ -81,7 +99,31 @@ export default {
           safeModel === "@cf/runwayml/stable-diffusion-v1-5-img2img" ||
           safeModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting"
         ) {
-          // ... (imageKey retrieval logic remains the same) ...
+          if (!imageKey) {
+            return new Response(
+              "Missing 'imageKey' in request body for this model",
+              { status: 400 }
+            );
+          }
+          try {
+            const storedImage = await env.IMAGE_STORE.get(imageKey, {
+              type: "arrayBuffer",
+            });
+            if (!storedImage) {
+              return new Response("Image not found in storage", {
+                status: 404,
+              });
+            }
+            imageData = storedImage;
+            inputs.image = imageData;
+            inputs.num_inference_steps = 50;
+            inputs.guidance_scale = 7.5;
+          } catch (kvError) {
+            console.error("Error retrieving image from KV:", kvError);
+            return new Response("Error retrieving image from storage", {
+              status: 500,
+            });
+          }
         }
 
         try {
@@ -90,7 +132,7 @@ export default {
             inputs
           )) as AiResponse;
 
-          console.log("Raw AI Response:", aiResponse); // Log the raw response
+          console.log("Raw AI Response:", aiResponse);
 
           if (
             safeModel === "@cf/black-forest-labs/flux-1-schnell" &&
@@ -108,7 +150,14 @@ export default {
             try {
               const arrayBuffer = await streamToArrayBuffer(aiResponse);
               console.log("Stream converted to ArrayBuffer:", arrayBuffer.byteLength, "bytes");
-              return new Response(arrayBuffer, { headers: { "Content-Type": "image/*" } }); // Try a more general content type
+              return new Response(arrayBuffer, {
+                headers: {
+                  "Content-Type": "image/*", // Or the specific image type if known
+                  "Access-Control-Allow-Origin": "*", // VERY IMPORTANT: Adjust for production!
+                  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                  "Access-Control-Allow-Headers": "Content-Type",
+                },
+              });
             } catch (streamError) {
               console.error("Error converting stream to ArrayBuffer:", streamError);
               return new Response("Error processing image stream", { status: 500 });
@@ -129,7 +178,16 @@ export default {
             status: 500,
           });
         } finally {
-          // ... (KV deletion logic remains the same) ...
+          if (imageKey) {
+            try {
+              await env.IMAGE_STORE.delete(imageKey);
+              console.log(
+                `/generate: Image with key ${imageKey} deleted from KV`
+              );
+            } catch (deleteError) {
+              console.error("Error deleting image from KV:", deleteError);
+            }
+          }
         }
       } catch (e) {
         console.error("Error during /generate handling:", e);
