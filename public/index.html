@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Image Generator</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
     <div class="container">
         <h1>Generate AI Image</h1>
@@ -59,6 +57,10 @@
                 <img id="generated-image" src="#" alt="Generated Image">
             </div>
         </div>
+
+        <div id="previous-images">
+            <h2>Previous Images (Current Session)</h2>
+        </div>
     </div>
 
     <script>
@@ -83,6 +85,7 @@
         const imageDisplay = document.getElementById('image-display');
         const generatedImage = document.getElementById('generated-image');
         const loadingIndicator = document.getElementById('loading');
+        const previousImagesContainer = document.getElementById('previous-images');
 
         let currentImageKey = null;
         let currentMaskKey = null;
@@ -236,12 +239,12 @@
                     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                 }
 
-                const imageBlob = await response.blob();
-                const imageUrl = URL.createObjectURL(imageBlob);
-
+                const data = await response.json();
+                const imageUrl = data.imageUrl; // Get the R2 URL
                 generatedImage.src = imageUrl;
                 generatedImage.style.display = 'block';
                 imageDisplay.style.backgroundColor = 'transparent';
+                loadPreviousImages(); // Reload thumbnails after new generation
 
             } catch (error) {
                 console.error('Error generating image:', error);
@@ -251,7 +254,23 @@
                 loadingIndicator.style.display = 'none';
             }
         });
+
+        async function loadPreviousImages() {
+            previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>'; // Clear previous thumbnails
+            const response = await fetch('/session-images');
+            const data = await response.json();
+            const keys = data.keys;
+
+            keys.forEach(key => {
+                const thumbnailUrl = `https://${IMAGE_BUCKET_NAME}.r2.dev/${key}?width=100&height=auto`; // Construct thumbnail URL
+                const img = document.createElement('img');
+                img.src = thumbnailUrl;
+                img.alt = 'Previous Generated Image';
+                previousImagesContainer.appendChild(img);
+            });
+        }
+
+        window.addEventListener('load', loadPreviousImages);
     </script>
 </body>
-
 </html>
