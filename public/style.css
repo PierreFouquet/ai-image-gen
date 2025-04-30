@@ -74,6 +74,7 @@ button:hover {
     max-width: 100%;
     height: auto;
     display: none;
+    transition: opacity 0.5s ease;
 }
 
 #loading {
@@ -86,7 +87,6 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    justify-content: center; /* Center align thumbnails */
 }
 
 #previous-images img {
@@ -94,28 +94,27 @@ button:hover {
     height: auto;
     border: 1px solid #ccc;
     cursor: pointer;
-    transition: transform 0.3s ease;
 }
 
-/* Thumbnail Hover Effect */
-#previous-images img:hover {
-    transform: scale(1.1); /* Zoom effect */
-    border-color: #007bff; /* Highlight border on hover */
+#uploaded-img, #uploaded-mask-img {
+    max-width: 200px;
+    max-height: 200px;
+    display: block;
+    margin: 0 auto;
 }
 
-/* Style for generated image */
-#generated-image {
-    max-width: 100%;
-    height: auto;
-    margin-top: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-}
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
 
-/* Additional styling for the image display area */
-#image-display img {
-    max-width: 90%;  /* Ensures the generated image does not overflow */
-    margin: 10px 0;
+    #uploaded-img, #uploaded-mask-img {
+        max-width: 150px;
+    }
+
+    #image-display {
+        min-height: 150px;
+    }
 }
 
 /* Loading spinner styling (Optional) */
