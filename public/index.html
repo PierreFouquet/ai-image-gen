@@ -262,7 +262,7 @@
             const keys = data.keys;
 
             keys.forEach(key => {
-                const thumbnailUrl = `https://${IMAGE_BUCKET_NAME}.r2.dev/${key}?width=100&height=auto`; // Construct thumbnail URL
+                const thumbnailUrl = `https://image-bucket.r2.dev/${key}?width=100&height=auto`; // Construct thumbnail URL
                 const img = document.createElement('img');
                 img.src = thumbnailUrl;
                 img.alt = 'Previous Generated Image';
