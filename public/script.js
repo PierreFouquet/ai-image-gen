@@ -149,6 +149,14 @@ generateBtn.addEventListener('click', async () => {
             generatedImage.onload = () => {
                 generatedImage.style.display = 'block';
                 loadingIndicator.style.display = 'none'; // Hide loading text
+
+                // Add the newly generated image to the previous images section
+                const img = document.createElement('img');
+                img.src = data.imageUrl + '?width=100&height=auto';  // Add sizing parameters
+                img.alt = 'Previous Generated Image';
+                previousImagesContainer.appendChild(img);
+
+                loadPreviousImages();  // Refresh thumbnails
             };
         }
     } catch (err) {
@@ -165,11 +173,9 @@ async function loadPreviousImages() {
         if (!response.ok) throw new Error('Failed to load previous images');
 
         const data = await response.json();
-        const previousImagesContainer = document.getElementById('previous-images');
-        previousImagesContainer.innerHTML = ''; // Clear previous images
+        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>';  // Ensure header is present
 
         if (data.keys && data.keys.length > 0) {
-            previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>';
             data.keys.forEach(key => {
                 const img = document.createElement('img');
                 img.src = `https://pub-8fa64dd4c5d8443db9d65e5e84df9c35.r2.dev/${key}?width=100&height=auto`;
@@ -181,9 +187,12 @@ async function loadPreviousImages() {
         }
     } catch (err) {
         console.error('Failed to fetch previous images:', err);
-        document.getElementById('previous-images').innerHTML = '<p>Error loading previous images.</p>';
+        previousImagesContainer.innerHTML = '<p>Error loading previous images.</p>';
     }
 }
 
 // Load previous images when the page loads
-window.addEventListener('load', loadPreviousImages);
+window.addEventListener('load', () => {
+    previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>'; // Initial header
+    loadPreviousImages();
+});
