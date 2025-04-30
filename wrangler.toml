@@ -1,6 +1,7 @@
 name = "ai-image-gen"
 main = "src/index.ts"
 compatibility_date = "2025-04-28"
+compatibility_flags = ["nodejs_compat"] # If you need Node.js compatibility features
 
 [ai]
 binding = "AI"
@@ -12,6 +13,10 @@ binding = "ASSETS"
 [observability.logs]
 enabled = true
 
-[[kv_namespaces]]
-binding = "IMAGE_STORE"
-id = "92b9d3bfb8994d92b2e750f630911824"
+[[r2_buckets]]
+binding = "IMAGE_BUCKET"
+bucket_name = "image-bucket"
+
+[[durable_objects.bindings]]
+name = "IMAGE_OBJECTS"
+class_name = "ImageObject" # The name of your Durable Object class
