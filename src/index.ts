@@ -201,7 +201,7 @@ export default {
                         const logEntry = JSON.stringify({ key: objectKey, timestamp });
                         await env.IMAGE_LOG.put(sessionId, (await env.IMAGE_LOG.get(sessionId) || '') + logEntry + '\n');
 
-                        const r2ObjectURL = `https://image-bucket.r2.dev/${objectKey}`; // Construct R2 URL
+                        const r2ObjectURL = `https://pub-8fa64dd4c5d8443db9d65e5e84df9c35.r2.dev/${objectKey}`; // Construct R2 URL
 
                         return new Response(JSON.stringify({ imageUrl: r2ObjectURL }), { // Return the URL
                             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
