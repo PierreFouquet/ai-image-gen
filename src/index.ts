@@ -114,7 +114,9 @@ export default {
                             });
                         }
                         imageData = storedImage;
-                        inputs.image = imageData;
+                        // Convert ArrayBuffer to Uint8Array, then to a regular Array of numbers
+                        const uint8Array = new Uint8Array(imageData);
+                        inputs.image = Array.from(uint8Array);
                         inputs.num_inference_steps = 50;
                         inputs.guidance_scale = 7.5;
                     } catch (kvError) {
