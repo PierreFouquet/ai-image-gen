@@ -13,16 +13,26 @@
         <h1>Generate AI Image</h1>
 
         <div id="upload-section" style="display: none;">
-            <h2>Upload Image (for Img2Img and Inpainting)</h2>
+            <h2>Upload Images (for Img2Img and Inpainting)</h2>
             <div class="input-group">
-                <label for="upload-image">Select Image:</label>
+                <label for="upload-image">Select Base Image:</label>
                 <input type="file" id="upload-image" accept="image/*">
             </div>
-            <button id="upload-btn">Upload Image</button>
+            <div class="input-group">
+                <label for="upload-mask">Select Mask Image (for Inpainting):</label>
+                <input type="file" id="upload-mask" accept="image/*">
+            </div>
+            <button id="upload-btn">Upload Images</button>
             <div id="upload-loading">Uploading...</div>
             <div id="uploaded-image-display">
-                <img id="uploaded-img" src="#" alt="Uploaded Image" style="display: none; max-width: 300px; max-height: 300px;">
-                <p id="uploaded-key" style="display: none;">Uploaded Image Key: <span id="key-value"></span></p>
+                <div id="base-image-preview">
+                    <img id="uploaded-img" src="#" alt="Uploaded Image" style="display: none; max-width: 200px; max-height: 200px;">
+                    <p id="uploaded-key" style="display: none;">Base Image Key: <span id="key-value"></span></p>
+                </div>
+                <div id="mask-image-preview">
+                    <img id="uploaded-mask-img" src="#" alt="Uploaded Mask" style="display: none; max-width: 200px; max-height: 200px;">
+                    <p id="uploaded-mask-key" style="display: none;">Mask Image Key: <span id="mask-key-value"></span></p>
+                </div>
             </div>
         </div>
 
@@ -34,14 +44,14 @@
             </div>
             <div class="input-group">
                 <label for="model">Select Model:</label>
-                    <select id="model">
-                        <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0 - (High resolution image generation)</option>
-                        <option value="@cf/stabilityai/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting - (Edit specific parts of an image)</option>
-                        <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning - (Fast image generation)</option>
-                        <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell - (Experimental model with unique outputs)</option>
-                        <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img - (Generate new images based on existing ones)</option>
-                        <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM - (Creative and artistic image generation)</option>
-                    </select>
+                <select id="model">
+                    <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0 - (High resolution image generation)</option>
+                    <option value="@cf/stabilityai/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting - (Edit specific parts of an image)</option>
+                    <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning - (Fast image generation)</option>
+                    <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell - (Experimental model with unique outputs)</option>
+                    <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img - (Generate new images based on existing ones)</option>
+                    <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM - (Creative and artistic image generation)</option>
+                </select>
             </div>
             <button id="generate-btn">Generate Image</button>
             <div id="loading">Generating...</div>
@@ -54,12 +64,16 @@
     <script>
         const uploadSection = document.getElementById('upload-section');
         const uploadInput = document.getElementById('upload-image');
+        const uploadMaskInput = document.getElementById('upload-mask');
         const uploadBtn = document.getElementById('upload-btn');
         const uploadLoading = document.getElementById('upload-loading');
         const uploadedImageDisplay = document.getElementById('uploaded-image-display');
         const uploadedImg = document.getElementById('uploaded-img');
         const uploadedKeyDisplay = document.getElementById('uploaded-key');
         const keyValueSpan = document.getElementById('key-value');
+        const uploadedMaskImg = document.getElementById('uploaded-mask-img');
+        const uploadedMaskKeyDisplay = document.getElementById('uploaded-mask-key');
+        const maskKeyValueSpan = document.getElementById('mask-key-value');
 
         const generateBtn = document.getElementById('generate-btn');
         const promptInput = document.getElementById('prompt');
@@ -69,48 +83,71 @@
         const loadingIndicator = document.getElementById('loading');
 
         let currentImageKey = null;
+        let currentMaskKey = null;
 
         uploadLoading.style.display = 'none';
         uploadedImageDisplay.style.display = 'none';
 
-        // Function to update upload section visibility based on selected model
         function updateUploadVisibility() {
             const selectedModel = modelSelect.value;
             if (selectedModel === "@cf/runwayml/stable-diffusion-v1-5-img2img" || selectedModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
                 uploadSection.style.display = 'block';
+                // Optionally clear previews and keys when switching
+                if (selectedModel !== "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
+                    uploadedMaskImg.src = '#';
+                    uploadedMaskImg.style.display = 'none';
+                    uploadedMaskKeyDisplay.style.display = 'none';
+                    currentMaskKey = null;
+                    maskKeyValueSpan.textContent = '';
+                    uploadMaskInput.value = '';
+                }
             } else {
                 uploadSection.style.display = 'none';
-                // Optionally clear the uploaded image and key when switching models
                 uploadedImg.src = '#';
                 uploadedImg.style.display = 'none';
                 uploadedKeyDisplay.style.display = 'none';
-                uploadedImageDisplay.style.display = 'none';
                 currentImageKey = null;
                 keyValueSpan.textContent = '';
-                uploadInput.value = ''; // Clear the file input
+                uploadInput.value = '';
+                uploadedMaskImg.src = '#';
+                uploadedMaskImg.style.display = 'none';
+                uploadedMaskKeyDisplay.style.display = 'none';
+                currentMaskKey = null;
+                maskKeyValueSpan.textContent = '';
+                uploadMaskInput.value = '';
             }
         }
 
-        // Initial call to set visibility on page load
         updateUploadVisibility();
-
-        // Event listener to update visibility when the model selection changes
         modelSelect.addEventListener('change', updateUploadVisibility);
 
         uploadBtn.addEventListener('click', async () => {
             const imageFile = uploadInput.files[0];
+            const maskFile = uploadMaskInput.files[0];
+            let imageKeyResult = null;
+            let maskKeyResult = null;
 
-            if (!imageFile) {
-                alert('Please select an image to upload.');
+            if (!imageFile && (modelSelect.value === "@cf/runwayml/stable-diffusion-v1-5-img2img" || modelSelect.value === "@cf/stabilityai/stable-diffusion-v1-5-inpainting")) {
+                alert('Please select a base image.');
+                return;
+            }
+            if (modelSelect.value === "@cf/stabilityai/stable-diffusion-v1-5-inpainting" && !maskFile) {
+                alert('Please select a mask image for inpainting.');
                 return;
             }
 
             uploadLoading.style.display = 'block';
             uploadedImageDisplay.style.display = 'none';
             currentImageKey = null;
+            currentMaskKey = null;
 
             const formData = new FormData();
-            formData.append('image', imageFile);
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+            if (maskFile) {
+                formData.append('mask', maskFile);
+            }
 
             try {
                 const response = await fetch('/upload', {
@@ -124,16 +161,25 @@
                 }
 
                 const data = await response.json();
-                currentImageKey = data.key;
-                keyValueSpan.textContent = currentImageKey;
-                uploadedImg.src = URL.createObjectURL(imageFile);
-                uploadedImg.style.display = 'block';
-                uploadedKeyDisplay.style.display = 'block';
+                if (data.imageKey) {
+                    currentImageKey = data.imageKey;
+                    keyValueSpan.textContent = currentImageKey;
+                    uploadedImg.src = URL.createObjectURL(imageFile);
+                    uploadedImg.style.display = 'block';
+                    uploadedKeyDisplay.style.display = 'block';
+                }
+                if (data.maskKey) {
+                    currentMaskKey = data.maskKey;
+                    maskKeyValueSpan.textContent = currentMaskKey;
+                    uploadedMaskImg.src = URL.createObjectURL(maskFile);
+                    uploadedMaskImg.style.display = 'block';
+                    uploadedMaskKeyDisplay.style.display = 'block';
+                }
                 uploadedImageDisplay.style.display = 'block';
 
             } catch (error) {
-                console.error('Error uploading image:', error);
-                alert(`Error uploading image: ${error.message}`);
+                console.error('Error uploading image(s):', error);
+                alert(`Error uploading image(s): ${error.message}`);
             } finally {
                 uploadLoading.style.display = 'none';
             }
@@ -144,7 +190,11 @@
             const model = modelSelect.value;
 
             if ((model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") && !currentImageKey) {
-                alert('Please upload an image for this model.');
+                alert('Please upload a base image for this model.');
+                return;
+            }
+            if (model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting" && !currentMaskKey) {
+                alert('Please upload a mask image for inpainting.');
                 return;
             }
             if (!prompt && !(model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting")) {
@@ -162,11 +212,9 @@
                 const requestBody = {
                     prompt: prompt,
                     model: model,
+                    imageKey: currentImageKey,
+                    maskKey: currentMaskKey,
                 };
-
-                if (currentImageKey && (model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting")) {
-                    requestBody.imageKey = currentImageKey;
-                }
 
                 const response = await fetch(workerUrl, {
                     method: 'POST',
