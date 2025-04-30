@@ -146,7 +146,7 @@ generateBtn.addEventListener('click', async () => {
         const data = await response.json();
 
         if (data.imageUrl) {
-            generatedImage.onload = () => {  // **CRUCIAL CHANGE:  All dependent code INSIDE onload**
+            generatedImage.onload = () => {
                 generatedImage.style.display = 'block';
                 loadingIndicator.style.display = 'none';
 
@@ -158,14 +158,15 @@ generateBtn.addEventListener('click', async () => {
 
                 console.log('Thumbnail added:', img.src);
             };
-            generatedImage.src = data.imageUrl;  // Set src AFTER defining onload
+            generatedImage.src = data.imageUrl;
+        } else if (data.error) {
+            throw new Error(data.error);  // Throw an error to be caught
         }
     } catch (err) {
         console.error('Error generating image:', err);
-        alert('Error generating image. Please try again.');
-        loadingIndicator.style.display = 'none';
-        errorMessage.textContent = `Error: ${err.message}`;
+        errorMessage.textContent = `Error: ${err.message || 'Unknown error'}`; // Handle potential missing err.message
         errorMessage.style.display = 'block';
+        loadingIndicator.style.display = 'none';
     }
 });
 
