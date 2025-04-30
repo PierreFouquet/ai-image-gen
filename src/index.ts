@@ -4,6 +4,26 @@ interface Env {
   IMAGE_STORE: KVNamespace;
 }
 
+const validAiModels = [
+  "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+  "@cf/stabilityai/stable-diffusion-v1-5-inpainting",
+  "@cf/bytedance/stable-diffusion-xl-lightning",
+  "@cf/black-forest-labs/flux-1-schnell",
+  "@cf/runwayml/stable-diffusion-v1-5-img2img",
+  "@cf/lykon/dreamshaper-8-lcm",
+] as const;
+
+type AiModels = typeof validAiModels[number];
+
+function isValidAiModel(model: string): model is AiModels {
+  return validAiModels.includes(model as AiModels);
+}
+
+type AiResponse =
+  | { image: string }
+  | ReadableStream<Uint8Array>
+  | ArrayBuffer;
+
 async function streamToArrayBuffer(stream: ReadableStream): Promise<ArrayBuffer> {
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
@@ -11,9 +31,7 @@ async function streamToArrayBuffer(stream: ReadableStream): Promise<ArrayBuffer>
 
   while (true) {
     const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
+    if (done) break;
     chunks.push(value);
     totalLength += value.length;
   }
@@ -62,69 +80,69 @@ export default {
           model?: string;
           imageKey?: string;
         }>();
-        const inputs: Record<string, any> = {
-          prompt: prompt,
-          num_inference_steps: 30,
-          guidance_scale: 8,
-        };
 
         if (!prompt) {
           return new Response("Missing 'prompt' in request body", { status: 400 });
         }
+
         if (!model) {
           return new Response("Missing 'model' in request body", { status: 400 });
         }
 
+        if (!isValidAiModel(model)) {
+          return new Response("Invalid model selected", { status: 400 });
+        }
+
+        const safeModel: AiModels = model;
+
+        const inputs: Record<string, any> = {
+          prompt,
+          num_inference_steps: 30,
+          guidance_scale: 8,
+        };
+
         let imageData: ArrayBuffer | null = null;
-        if (model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
+
+        if (safeModel === "@cf/runwayml/stable-diffusion-v1-5-img2img" || safeModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
           if (!imageKey) {
             return new Response("Missing 'imageKey' in request body for this model", { status: 400 });
           }
-          console.log(`/generate: Retrieving image from KV with key: ${imageKey}`);
-          const storedImage = await env.IMAGE_STORE.get(imageKey, { type: "arrayBuffer" });
-          console.log(`/generate: storedImage:`, storedImage); // Log storedImage
 
-          if (!storedImage) {
-            return new Response("Image not found in storage", { status: 404 });
+          try {
+            const storedImage = await env.IMAGE_STORE.get(imageKey, { type: "arrayBuffer" });
+
+            if (!storedImage) {
+              return new Response("Image not found in storage", { status: 404 });
+            }
+
+            imageData = storedImage;
+            inputs.image = imageData;
+            inputs.num_inference_steps = 50;
+            inputs.guidance_scale = 7.5;
+          } catch (kvError) {
+            console.error("Error retrieving image from KV:", kvError);
+            return new Response("Error retrieving image from storage", { status: 500 });
           }
-          imageData = storedImage;
-          console.log(`/generate: imageData:`, imageData); // Log imageData
-          inputs.image = imageData;
-          inputs.num_inference_steps = 50;
-          inputs.guidance_scale = 7.5;
         }
 
-        console.log("/generate: Inputs to AI.run:", inputs);
         try {
-          const aiResponse = await env.AI.run(model, inputs);
+          const aiResponse = await env.AI.run(safeModel, inputs) as AiResponse;
 
-          if (model === "@cf/black-forest-labs/flux-1-schnell") {
-            try {
-              console.log("Flux 1 Schnell Response (JSON.stringify):", JSON.stringify(aiResponse, null, 2));
-            } catch (e) {
-              console.error("Error stringifying aiResponse:", e);
-              console.log("Flux 1 Schnell Response (typeof):", typeof aiResponse);
+          if (safeModel === "@cf/black-forest-labs/flux-1-schnell" && typeof aiResponse === 'object' && 'image' in aiResponse) {
+            const binaryString = atob(aiResponse.image);
+            const img = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              img[i] = binaryString.charCodeAt(i);
             }
-
-            if (aiResponse && typeof aiResponse.image === 'string') {
-              const binaryString = atob(aiResponse.image);
-              const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
-              return new Response(img, { headers: { 'Content-Type': 'image/jpeg' } });
-            } else {
-              console.error("Unexpected Flux 1 Schnell response format:", aiResponse);
-              return new Response("Error generating image: Unexpected Flux 1 Schnell response format", { status: 500 });
-            }
+            return new Response(img, { headers: { 'Content-Type': 'image/jpeg' } });
+          } else if (aiResponse instanceof ReadableStream) {
+            const arrayBuffer = await streamToArrayBuffer(aiResponse);
+            return new Response(arrayBuffer, { headers: { 'Content-Type': 'image/png' } });
+          } else if (aiResponse instanceof ArrayBuffer) {
+            return new Response(aiResponse, { headers: { 'Content-Type': 'image/png' } });
           } else {
-            console.log("Response (typeof):", typeof aiResponse);
-
-            if (aiResponse instanceof ReadableStream) {
-              const arrayBuffer = await streamToArrayBuffer(aiResponse);
-              return new Response(arrayBuffer, { headers: { 'Content-Type': 'image/png' } });
-            } else {
-              console.error("Unexpected AI response format:", aiResponse);
-              console.log("Full aiResponse:", aiResponse);
-              return new Response("Error generating image: Unexpected response format", { status: 500 });
-            }
+            console.error("Unexpected AI response format:", aiResponse);
+            return new Response("Error generating image: Unexpected response format", { status: 500 });
           }
         } catch (aiError) {
           console.error("Error during AI.run:", aiError);
@@ -132,7 +150,12 @@ export default {
           return new Response(`Error generating image: ${aiErrorMessage}`, { status: 500 });
         } finally {
           if (imageKey) {
-            await env.IMAGE_STORE.delete(imageKey);
+            try {
+              await env.IMAGE_STORE.delete(imageKey);
+              console.log(`/generate: Image with key ${imageKey} deleted from KV`);
+            } catch (deleteError) {
+              console.error("Error deleting image from KV:", deleteError);
+            }
           }
         }
       } catch (e) {
@@ -144,7 +167,6 @@ export default {
 
     if (env.ASSETS) {
       try {
-        console.log("Serving static asset via ASSETS:", request.url);
         return await env.ASSETS.fetch(request);
       } catch (e) {
         console.error("Error fetching asset via ASSETS:", e);
