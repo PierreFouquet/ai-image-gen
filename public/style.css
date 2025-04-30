@@ -80,6 +80,9 @@ button:hover {
 #loading {
     display: none;
     color: #555;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
 }
 
 #previous-images {
