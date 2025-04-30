@@ -18,14 +18,15 @@
         <div class="input-group">
             <label for="model">Select Model:</label>
             <select id="model">
-                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0</option>
-                <option value="@cf/stabilityai/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting</option>
-                <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning</option>
-                <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell</option>
-                <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img</option>
-                <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM</option>
+                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0 (General purpose, high quality)</option>
+                <option value="@cf/stabilityai/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting (Edit existing images)</option>
+                <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning (Fast generation)</option>
+                <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell (Experimental, fast style transfer)</option>
+                <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img (Transform existing images)</option>
+                <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM (Good for portraits and anime style)</option>
             </select>
         </div>
+        <div class="model-description"></div>
         <div class="input-group" id="image-upload-group" style="display: none;">
             <label for="image-upload">Upload Image:</label>
             <input type="file" id="image-upload" accept="image/*">
@@ -46,23 +47,31 @@
         const loadingIndicator = document.getElementById('loading');
         const imageUploadGroup = document.getElementById('image-upload-group');
         const imageUpload = document.getElementById('image-upload');
+        const modelDescription = document.querySelector('.model-description');
 
-        const img2imgModel = "@cf/runwayml/stable-diffusion-v1-5-img2img";
-        const inpaintingModel = "@cf/stabilityai/stable-diffusion-v1-5-inpainting";
+        const modelDescriptions = {
+            "@cf/stabilityai/stable-diffusion-xl-base-1.0": "Stable Diffusion XL Base 1.0 (General purpose, high quality)",
+            "@cf/stabilityai/stable-diffusion-v1-5-inpainting": "Stable Diffusion v1.5 Inpainting (Edit existing images)",
+            "@cf/bytedance/stable-diffusion-xl-lightning": "Stable Diffusion XL Lightning (Fast generation)",
+            "@cf/black-forest-labs/flux-1-schnell": "Flux 1 Schnell (Experimental, fast style transfer)",
+            "@cf/runwayml/stable-diffusion-v1-5-img2img": "Stable Diffusion v1.5 Img2Img (Transform existing images)",
+            "@cf/lykon/dreamshaper-8-lcm": "Dreamshaper 8 LCM (Good for portraits and anime style)"
+        };
 
         modelSelect.addEventListener('change', () => {
-            if (modelSelect.value === img2imgModel || modelSelect.value === inpaintingModel) {
+            if (modelSelect.value === "@cf/runwayml/stable-diffusion-v1-5-img2img" || modelSelect.value === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
                 imageUploadGroup.style.display = 'block';
             } else {
                 imageUploadGroup.style.display = 'none';
             }
+            modelDescription.textContent = modelDescriptions[modelSelect.value] || "";
         });
 
         async function uploadImage(file) {
             const formData = new FormData();
             formData.append('image', file);
 
-            const response = await fetch('/upload', { // New /upload endpoint
+            const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData,
             });
@@ -85,7 +94,7 @@
                 return;
             }
 
-            if ((model === img2imgModel || model === inpaintingModel) && !imageUpload.files.length) {
+            if ((model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") && !imageUpload.files.length) {
                 alert('Please upload an image for this model.');
                 return;
             }
@@ -115,7 +124,7 @@
                 };
 
                 if (imageKey) {
-                    requestBody.imageKey = imageKey; // Send imageKey instead of image
+                    requestBody.imageKey = imageKey;
                 }
 
                 const response = await fetch(workerUrl, {
