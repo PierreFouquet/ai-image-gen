@@ -1,14 +1,74 @@
-// Handle image uploads for Img2Img and Inpainting
-const uploadBtn = document.getElementById('upload-btn');
+// script.js
+
+const uploadSection = document.getElementById('upload-section');
+const baseImageUpload = document.getElementById('base-image-upload');
 const uploadInput = document.getElementById('upload-image');
+const maskImageUpload = document.getElementById('mask-image-upload');
 const uploadMaskInput = document.getElementById('upload-mask');
+const uploadBtn = document.getElementById('upload-btn');
 const uploadLoading = document.getElementById('upload-loading');
+const uploadedImageDisplay = document.getElementById('uploaded-image-display');
 const uploadedImg = document.getElementById('uploaded-img');
 const uploadedKeyDisplay = document.getElementById('uploaded-key');
+const keyValueSpan = document.getElementById('key-value');
 const uploadedMaskImg = document.getElementById('uploaded-mask-img');
 const uploadedMaskKeyDisplay = document.getElementById('uploaded-mask-key');
+const maskKeyValueSpan = document.getElementById('mask-key-value');
 
-// Handle the "Upload" button click
+const generateBtn = document.getElementById('generate-btn');
+const promptInput = document.getElementById('prompt');
+const modelSelect = document.getElementById('model');
+const imageDisplay = document.getElementById('image-display');
+const generatedImage = document.getElementById('generated-image');
+const loadingIndicator = document.getElementById('loading');
+const previousImagesContainer = document.getElementById('previous-images');
+
+let currentImageKey = null;
+let currentMaskKey = null;
+
+uploadLoading.style.display = 'none';
+uploadedImageDisplay.style.display = 'none';
+
+function updateUploadVisibility() {
+    const selectedModel = modelSelect.value;
+    if (selectedModel === "@cf/runwayml/stable-diffusion-v1-5-img2img") {
+        uploadSection.style.display = 'block';
+        baseImageUpload.style.display = 'block';
+        maskImageUpload.style.display = 'none';
+        resetMask();
+    } else if (selectedModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting") {
+        uploadSection.style.display = 'block';
+        baseImageUpload.style.display = 'block';
+        maskImageUpload.style.display = 'block';
+    } else {
+        uploadSection.style.display = 'none';
+        resetUpload();
+        resetMask();
+    }
+}
+
+function resetUpload() {
+    uploadedImg.src = '#';
+    uploadedImg.style.display = 'none';
+    uploadedKeyDisplay.style.display = 'none';
+    currentImageKey = null;
+    keyValueSpan.textContent = '';
+    uploadInput.value = '';
+}
+
+function resetMask() {
+    uploadedMaskImg.src = '#';
+    uploadedMaskImg.style.display = 'none';
+    uploadedMaskKeyDisplay.style.display = 'none';
+    currentMaskKey = null;
+    maskKeyValueSpan.textContent = '';
+    uploadMaskInput.value = '';
+}
+
+modelSelect.addEventListener('change', updateUploadVisibility);
+updateUploadVisibility();
+
+// Handle image uploads for Img2Img and Inpainting
 uploadBtn.addEventListener('click', async () => {
     const imageFile = uploadInput.files[0];
     const maskFile = uploadMaskInput.files[0];
@@ -61,13 +121,6 @@ uploadBtn.addEventListener('click', async () => {
 });
 
 // Generate new image using the prompt and selected model
-const generateBtn = document.getElementById('generate-btn');
-const promptInput = document.getElementById('prompt');
-const modelSelect = document.getElementById('model');
-const generatedImage = document.getElementById('generated-image');
-const loadingText = document.getElementById('loading');
-
-// Handle the "Generate Image" button click
 generateBtn.addEventListener('click', async () => {
     const prompt = promptInput.value.trim();
     const model = modelSelect.value;
