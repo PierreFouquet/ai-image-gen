@@ -14,11 +14,11 @@
 
         <div id="upload-section" style="display: none;">
             <h2>Upload Images (for Img2Img and Inpainting)</h2>
-            <div class="input-group">
+            <div class="input-group" id="base-image-upload">
                 <label for="upload-image">Select Base Image:</label>
                 <input type="file" id="upload-image" accept="image/*">
             </div>
-            <div class="input-group">
+            <div class="input-group" id="mask-image-upload" style="display: none;">
                 <label for="upload-mask">Select Mask Image (for Inpainting):</label>
                 <input type="file" id="upload-mask" accept="image/*">
             </div>
@@ -63,7 +63,9 @@
 
     <script>
         const uploadSection = document.getElementById('upload-section');
+        const baseImageUpload = document.getElementById('base-image-upload');
         const uploadInput = document.getElementById('upload-image');
+        const maskImageUpload = document.getElementById('mask-image-upload');
         const uploadMaskInput = document.getElementById('upload-mask');
         const uploadBtn = document.getElementById('upload-btn');
         const uploadLoading = document.getElementById('upload-loading');
@@ -90,19 +92,24 @@
 
         function updateUploadVisibility() {
             const selectedModel = modelSelect.value;
-            if (selectedModel === "@cf/runwayml/stable-diffusion-v1-5-img2img" || selectedModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
+            if (selectedModel === "@cf/runwayml/stable-diffusion-v1-5-img2img") {
                 uploadSection.style.display = 'block';
-                // Optionally clear previews and keys when switching
-                if (selectedModel !== "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
-                    uploadedMaskImg.src = '#';
-                    uploadedMaskImg.style.display = 'none';
-                    uploadedMaskKeyDisplay.style.display = 'none';
-                    currentMaskKey = null;
-                    maskKeyValueSpan.textContent = '';
-                    uploadMaskInput.value = '';
-                }
+                baseImageUpload.style.display = 'block';
+                maskImageUpload.style.display = 'none';
+                // Clear mask-related data
+                uploadedMaskImg.src = '#';
+                uploadedMaskImg.style.display = 'none';
+                uploadedMaskKeyDisplay.style.display = 'none';
+                currentMaskKey = null;
+                maskKeyValueSpan.textContent = '';
+                uploadMaskInput.value = '';
+            } else if (selectedModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting") {
+                uploadSection.style.display = 'block';
+                baseImageUpload.style.display = 'block';
+                maskImageUpload.style.display = 'block';
             } else {
                 uploadSection.style.display = 'none';
+                // Clear all uploaded data
                 uploadedImg.src = '#';
                 uploadedImg.style.display = 'none';
                 uploadedKeyDisplay.style.display = 'none';
@@ -127,11 +134,11 @@
             let imageKeyResult = null;
             let maskKeyResult = null;
 
-            if (!imageFile && (modelSelect.value === "@cf/runwayml/stable-diffusion-v1-5-img2img" || modelSelect.value === "@cf/stabilityai/stable-diffusion-v1-5-inpainting")) {
+            if (!imageFile && (modelSelect.value === "@cf/runwayml/stable-diffusion-v1-5-img2img" || modelSelect.value === "@cf/runwayml/stable-diffusion-v1-5-inpainting")) {
                 alert('Please select a base image.');
                 return;
             }
-            if (modelSelect.value === "@cf/stabilityai/stable-diffusion-v1-5-inpainting" && !maskFile) {
+            if (modelSelect.value === "@cf/runwayml/stable-diffusion-v1-5-inpainting" && !maskFile) {
                 alert('Please select a mask image for inpainting.');
                 return;
             }
@@ -189,15 +196,15 @@
             const prompt = promptInput.value;
             const model = modelSelect.value;
 
-            if ((model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") && !currentImageKey) {
+            if ((model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/runwayml/stable-diffusion-v1-5-inpainting") && !currentImageKey) {
                 alert('Please upload a base image for this model.');
                 return;
             }
-            if (model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting" && !currentMaskKey) {
+            if (model === "@cf/runwayml/stable-diffusion-v1-5-inpainting" && !currentMaskKey) {
                 alert('Please upload a mask image for inpainting.');
                 return;
             }
-            if (!prompt && !(model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting")) {
+            if (!prompt && !(model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/runwayml/stable-diffusion-v1-5-inpainting")) {
                 // Allow empty prompt for other models if needed
             }
 
