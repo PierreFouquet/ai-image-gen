@@ -90,7 +90,6 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    justify-content: center;
 }
 
 #previous-images img {
@@ -98,20 +97,92 @@ button:hover {
     height: auto;
     border: 1px solid #ccc;
     cursor: pointer;
-    transition: transform 0.3s ease;
 }
 
-#previous-images img:hover {
-    transform: scale(1.1);
-    border-color: #007bff;
+#uploaded-img,
+#uploaded-mask-img {
+    max-width: 200px;
+    max-height: 200px;
+    display: block;
+    margin: 0 auto;
 }
 
-#generated-image {
-    max-width: 100%;
-    height: auto;
-    margin-top: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+
+    #uploaded-img,
+    #uploaded-mask-img {
+        max-width: 150px;
+    }
+
+    #image-display {
+        min-height: 150px;
+    }
+}
+
+/* The Modal (background) */
+.modal {
+    display: none;
+    /* Hidden by default */
+    position: fixed;
+    /* Stay in place */
+    z-index: 1;
+    /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%;
+    /* Full width */
+    height: 100%;
+    /* Full height */
+    overflow: auto;
+    /* Enable scroll if needed */
+    background-color: rgb(0, 0, 0);
+    /* Fallback color */
+    background-color: rgba(0, 0, 0, 0.9);
+    /* Black w/ opacity */
+}
+
+/* Modal Content (image) */
+.modal-content {
+    margin: auto;
+    display: block;
+    max-width: 80%;
+    max-height: 80%;
+}
+
+/* The Close Button */
+.close {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.close:hover,
+.close:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Download button style */
+.download-button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.download-button:hover {
+    background-color: #3e8e41;
 }
 
 /* Loading spinner styling (Optional) */
