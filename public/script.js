@@ -149,6 +149,13 @@ generateBtn.addEventListener('click', async () => {
         generatedImage.src = data.imageUrl;
         generatedImage.style.display = 'block';
         imageDisplay.style.backgroundColor = 'transparent';
+
+        // Add the newly generated image to the previous images section
+        const img = document.createElement('img');
+        img.src = generatedImage.src;
+        img.alt = 'Generated Image';
+        previousImagesContainer.appendChild(img);
+
         loadPreviousImages();
 
     } catch (error) {
