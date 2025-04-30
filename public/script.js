@@ -120,6 +120,15 @@ uploadBtn.addEventListener('click', async () => {
     }
 });
 
+// Function to load the image and return a Promise
+function loadImage(imageUrl) {
+    return new Promise((resolve, reject) => {
+        generatedImage.onload = () => resolve(generatedImage);
+        generatedImage.onerror = reject;
+        generatedImage.src = imageUrl;
+    });
+}
+
 // Generate new image using the prompt and selected model
 generateBtn.addEventListener('click', async () => {
     const prompt = promptInput.value.trim();
@@ -130,6 +139,7 @@ generateBtn.addEventListener('click', async () => {
         return;
     }
 
+    // Reset UI
     generatedImage.style.display = 'none';
     loadingIndicator.style.display = 'block';
     errorMessage.style.display = 'none';
@@ -145,26 +155,29 @@ generateBtn.addEventListener('click', async () => {
 
         const data = await response.json();
 
-        if (data.imageUrl) {
-            generatedImage.onload = () => {
-                generatedImage.style.display = 'block';
-                loadingIndicator.style.display = 'none';
-
-                const img = document.createElement('img');
-                img.src = data.imageUrl + '?width=100&height=auto';
-                img.alt = 'Previous Generated Image';
-                img.classList.add('previous-image');
-                previousImagesContainer.appendChild(img);
-
-                console.log('Thumbnail added:', img.src);
-            };
-            generatedImage.src = data.imageUrl;
-        } else if (data.error) {
-            throw new Error(data.error);  // Throw an error to be caught
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
-    } catch (err) {
-        console.error('Error generating image:', err);
-        errorMessage.textContent = `Error: ${err.message || 'Unknown error'}`; // Handle potential missing err.message
+
+        if (data.imageUrl) {
+            await loadImage(data.imageUrl); // Wait for the image to load
+            generatedImage.style.display = 'block';
+            loadingIndicator.style.display = 'none';
+
+            // Add to previous images
+            const img = document.createElement('img');
+            img.src = data.imageUrl + '?width=100&height=auto';
+            img.alt = 'Previous Generated Image';
+            img.classList.add('previous-image');
+            previousImagesContainer.appendChild(img);
+        } else if (data.error) {
+            throw new Error(data.error);
+        } else {
+            throw new Error('Failed to generate image: Unknown error');
+        }
+    } catch (error) {
+        console.error('Error generating image:', error);
+        errorMessage.textContent = `Error: ${error.message || 'An unexpected error occurred.'}`;
         errorMessage.style.display = 'block';
         loadingIndicator.style.display = 'none';
     }
@@ -174,7 +187,6 @@ const modal = document.getElementById('image-modal');
 const modalImage = document.getElementById('modal-image');
 const closeBtn = document.querySelector('.close');
 const downloadLink = document.getElementById('download-link');
-const previousImagesContainer = document.getElementById('previous-images');
 
 // Fetch and display previous images
 async function loadPreviousImages() {
@@ -183,7 +195,6 @@ async function loadPreviousImages() {
         if (!response.ok) throw new Error('Failed to load previous images');
 
         const data = await response.json();
-        const previousImagesContainer = document.getElementById('previous-images');
         previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>';
 
         if (data.keys && data.keys.length > 0) {
