@@ -13,9 +13,9 @@ binding = "ASSETS"
 [observability.logs]
 enabled = true
 
-[[r2_buckets]]
-binding = "IMAGE_BUCKET"
-bucket_name = "image-bucket"
+[r2_buckets]
+IMAGE_BUCKET = { binding = "IMAGE_BUCKET" }
+IMAGE_LOG = { binding = "IMAGE_STORE" }
 
  [[kv_namespaces]]
  binding = "IMAGE_STORE"
