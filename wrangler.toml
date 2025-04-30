@@ -20,3 +20,7 @@ bucket_name = "image-bucket"
 [[durable_objects.bindings]]
 name = "IMAGE_OBJECTS"
 class_name = "ImageObject" # The name of your Durable Object class
+
+[[migrations]]
+tag = "v1"
+new_classes = [ "ImageObject" ]
