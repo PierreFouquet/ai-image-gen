@@ -84,3 +84,17 @@ button:hover {
     /* Hidden by default */
     color: #555;
 }
+
+#previous-images {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#previous-images img {
+    max-width: 100px;
+    height: auto;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
