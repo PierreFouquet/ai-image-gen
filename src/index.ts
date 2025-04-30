@@ -8,7 +8,7 @@ interface Env {
 
 const validAiModels = [
     "@cf/stabilityai/stable-diffusion-xl-base-1.0",
-    "@cf/stabilityai/stable-diffusion-v1-5-inpainting",
+    "@cf/runwayml/stable-diffusion-v1-5-inpainting",
     "@cf/bytedance/stable-diffusion-xl-lightning",
     "@cf/black-forest-labs/flux-1-schnell",
     "@cf/runwayml/stable-diffusion-v1-5-img2img",
