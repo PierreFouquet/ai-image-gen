@@ -12,7 +12,7 @@
     <div class="container">
         <h1>Generate AI Image</h1>
 
-        <div class="upload-section">
+        <div id="upload-section" style="display: none;">
             <h2>Upload Image (for Img2Img and Inpainting)</h2>
             <div class="input-group">
                 <label for="upload-image">Select Image:</label>
@@ -52,6 +52,7 @@
     </div>
 
     <script>
+        const uploadSection = document.getElementById('upload-section');
         const uploadInput = document.getElementById('upload-image');
         const uploadBtn = document.getElementById('upload-btn');
         const uploadLoading = document.getElementById('upload-loading');
@@ -71,6 +72,30 @@
 
         uploadLoading.style.display = 'none';
         uploadedImageDisplay.style.display = 'none';
+
+        // Function to update upload section visibility based on selected model
+        function updateUploadVisibility() {
+            const selectedModel = modelSelect.value;
+            if (selectedModel === "@cf/runwayml/stable-diffusion-v1-5-img2img" || selectedModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
+                uploadSection.style.display = 'block';
+            } else {
+                uploadSection.style.display = 'none';
+                // Optionally clear the uploaded image and key when switching models
+                uploadedImg.src = '#';
+                uploadedImg.style.display = 'none';
+                uploadedKeyDisplay.style.display = 'none';
+                uploadedImageDisplay.style.display = 'none';
+                currentImageKey = null;
+                keyValueSpan.textContent = '';
+                uploadInput.value = ''; // Clear the file input
+            }
+        }
+
+        // Initial call to set visibility on page load
+        updateUploadVisibility();
+
+        // Event listener to update visibility when the model selection changes
+        modelSelect.addEventListener('change', updateUploadVisibility);
 
         uploadBtn.addEventListener('click', async () => {
             const imageFile = uploadInput.files[0];
@@ -118,8 +143,8 @@
             const prompt = promptInput.value;
             const model = modelSelect.value;
 
-            if (!prompt && (model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting")) {
-                alert('Please enter a prompt for this model.');
+            if ((model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") && !currentImageKey) {
+                alert('Please upload an image for this model.');
                 return;
             }
             if (!prompt && !(model === "@cf/runwayml/stable-diffusion-v1-5-img2img" || model === "@cf/stabilityai/stable-diffusion-v1-5-inpainting")) {
