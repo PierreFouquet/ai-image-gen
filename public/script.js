@@ -211,11 +211,11 @@ previousImagesContainer.addEventListener('click', (event) => {
 });
 
 // Close the modal
-closeBtn.onclick = function () {
+closeBtn.onclick = function() {
     modal.style.display = 'none';
 }
 
-window.onclick = function (event) {
+window.onclick = function(event) {
     if (event.target == modal) {
         modal.style.display = 'none';
     }
