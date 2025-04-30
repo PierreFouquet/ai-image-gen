@@ -1,4 +1,4 @@
-import { ImageObject } from "./imageObject"; // Import the Durable Object class
+import { ImageObject } from "./ImageObject.ts";
 
 interface Env {
   AI: Ai;
@@ -139,4 +139,4 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-export { ImageObject }; // Export the Durable Object class
+export { ImageObject };
