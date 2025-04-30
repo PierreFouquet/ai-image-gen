@@ -22,7 +22,7 @@ const imageDisplay = document.getElementById('image-display');
 const generatedImage = document.getElementById('generated-image');
 const loadingIndicator = document.getElementById('loading');
 const previousImagesContainer = document.getElementById('previous-images');
-const errorMessage = document.getElementById('error-message');  // Get error message element
+const errorMessage = document.getElementById('error-message');
 
 let currentImageKey = null;
 let currentMaskKey = null;
@@ -84,7 +84,7 @@ uploadBtn.addEventListener('click', async () => {
         return;
     }
 
-    uploadLoading.style.display = 'block'; // Show loading spinner
+    uploadLoading.style.display = 'block';
 
     const formData = new FormData();
     formData.append('image', imageFile);
@@ -98,7 +98,6 @@ uploadBtn.addEventListener('click', async () => {
 
         const data = await response.json();
 
-        // Handle successful upload response
         if (data.baseImageKey) {
             uploadedImg.src = `https://pub-8fa64dd4c5d8443db9d65e5e84df9c35.r2.dev/${data.baseImageKey}`;
             uploadedImg.style.display = 'block';
@@ -113,7 +112,7 @@ uploadBtn.addEventListener('click', async () => {
             document.getElementById('mask-key-value').textContent = data.maskImageKey;
         }
 
-        uploadLoading.style.display = 'none'; // Hide loading spinner
+        uploadLoading.style.display = 'none';
     } catch (err) {
         console.error('Error uploading images:', err);
         alert('Error uploading images. Please try again.');
@@ -131,8 +130,9 @@ generateBtn.addEventListener('click', async () => {
         return;
     }
 
-    generatedImage.style.display = 'none'; // Hide previously generated image
-    loadingIndicator.style.display = 'block'; // Show loading text
+    generatedImage.style.display = 'none';
+    loadingIndicator.style.display = 'block';
+    errorMessage.style.display = 'none';
 
     try {
         const response = await fetch('/generate', {
@@ -146,21 +146,19 @@ generateBtn.addEventListener('click', async () => {
         const data = await response.json();
 
         if (data.imageUrl) {
-            generatedImage.src = data.imageUrl;
-            generatedImage.onload = () => {
+            generatedImage.onload = () => {  // **CRUCIAL CHANGE:  All dependent code INSIDE onload**
                 generatedImage.style.display = 'block';
-                loadingIndicator.style.display = 'none'; // Hide loading text
-                errorMessage.style.display = 'none';  // Hide error message on success
+                loadingIndicator.style.display = 'none';
 
-                // Add the newly generated image to the previous images section
                 const img = document.createElement('img');
-                img.src = data.imageUrl + '?width=100&height=auto'; // Add sizing parameters
+                img.src = data.imageUrl + '?width=100&height=auto';
                 img.alt = 'Previous Generated Image';
-                img.classList.add('previous-image'); // Add a class for styling/events
+                img.classList.add('previous-image');
                 previousImagesContainer.appendChild(img);
 
-                console.log('Thumbnail added:', img.src); // Debugging
+                console.log('Thumbnail added:', img.src);
             };
+            generatedImage.src = data.imageUrl;  // Set src AFTER defining onload
         }
     } catch (err) {
         console.error('Error generating image:', err);
@@ -185,22 +183,22 @@ async function loadPreviousImages() {
 
         const data = await response.json();
         const previousImagesContainer = document.getElementById('previous-images');
-        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>'; // Keep the heading
+        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>';
 
         if (data.keys && data.keys.length > 0) {
             data.keys.forEach(key => {
                 const img = document.createElement('img');
                 img.src = `https://pub-8fa64dd4c5d8443db9d65e5e84df9c35.r2.dev/${key}?width=100&height=auto`;
                 img.alt = 'Previous Generated Image';
-                img.classList.add('previous-image'); // Add a class for styling/events
+                img.classList.add('previous-image');
                 previousImagesContainer.appendChild(img);
             });
         } else {
-            previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>No previous images available.</p>'; //Add heading
+            previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>No previous images available.</p>';
         }
     } catch (err) {
         console.error('Failed to fetch previous images:', err);
-        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>Error loading previous images.</p>'; // Add heading
+        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>Error loading previous images.</p>';
     }
 }
 
@@ -208,9 +206,9 @@ async function loadPreviousImages() {
 previousImagesContainer.addEventListener('click', (event) => {
     if (event.target.tagName === 'IMG' && event.target.classList.contains('previous-image')) {
         modal.style.display = 'block';
-        modalImage.src = event.target.src.split('?')[0]; // Get full-size URL
+        modalImage.src = event.target.src.split('?')[0];
         downloadLink.href = event.target.src.split('?')[0];
-        downloadLink.download = 'generated_image.png'; // Default filename
+        downloadLink.download = 'generated_image.png';
     }
 });
 
