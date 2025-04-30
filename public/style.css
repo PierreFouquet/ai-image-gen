@@ -86,6 +86,7 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: center; /* Center align thumbnails */
 }
 
 #previous-images img {
@@ -93,4 +94,35 @@ button:hover {
     height: auto;
     border: 1px solid #ccc;
     cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+/* Thumbnail Hover Effect */
+#previous-images img:hover {
+    transform: scale(1.1); /* Zoom effect */
+    border-color: #007bff; /* Highlight border on hover */
+}
+
+/* Style for generated image */
+#generated-image {
+    max-width: 100%;
+    height: auto;
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+/* Additional styling for the image display area */
+#image-display img {
+    max-width: 90%;  /* Ensures the generated image does not overflow */
+    margin: 10px 0;
+}
+
+/* Loading spinner styling (Optional) */
+#loading {
+    display: none;
+    color: #555;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
 }
