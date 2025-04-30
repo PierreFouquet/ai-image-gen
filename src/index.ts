@@ -4,8 +4,8 @@ interface Env {
     AI: Ai;
     ASSETS: Fetcher;
     IMAGE_STORE: KVNamespace; // Still used for uploaded images
-    IMAGE_BUCKET: R2Bucket;    // R2 bucket for generated images
-    IMAGE_LOG: KVNamespace;     // KV for logging generated image keys (per session)
+    IMAGE_BUCKET: R2Bucket;      // R2 bucket for generated images
+    IMAGE_LOG: KVNamespace;       // KV for logging generated image keys (per session)
 }
 
 const validAiModels = [
@@ -201,7 +201,7 @@ export default {
                         const logEntry = JSON.stringify({ key: objectKey, timestamp });
                         await env.IMAGE_LOG.put(sessionId, (await env.IMAGE_LOG.get(sessionId) || '') + logEntry + '\n');
 
-                        const r2ObjectURL = `https://${env.image-bucket.bucket()}.r2.dev/${objectKey}`; // Construct R2 URL
+                        const r2ObjectURL = `https://image-bucket.r2.dev/${objectKey}`; // Construct R2 URL
 
                         return new Response(JSON.stringify({ imageUrl: r2ObjectURL }), { // Return the URL
                             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
