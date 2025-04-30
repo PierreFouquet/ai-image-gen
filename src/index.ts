@@ -208,22 +208,19 @@ export default {
                         status: 500,
                     });
                 } finally {
-                    if (imageKey) {
+                    // Delete the images after successful generation if the model is NOT img2img or inpainting
+                    if (imageKey && safeModel !== "@cf/runwayml/stable-diffusion-v1-5-img2img" && safeModel !== "@cf/runwayml/stable-diffusion-v1-5-inpainting") {
                         try {
                             await env.IMAGE_STORE.delete(imageKey);
-                            console.log(
-                                `/generate: Base image with key ${imageKey} deleted from KV`
-                            );
+                            console.log(`/generate: Base image with key ${imageKey} deleted from KV`);
                         } catch (deleteError) {
                             console.error("Error deleting base image from KV:", deleteError);
                         }
                     }
-                    if (maskKey) {
+                    if (maskKey && safeModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting") {
                         try {
                             await env.IMAGE_STORE.delete(maskKey);
-                            console.log(
-                                `/generate: Mask image with key ${maskKey} deleted from KV`
-                            );
+                            console.log(`/generate: Mask image with key ${maskKey} deleted from KV`);
                         } catch (deleteError) {
                             console.error("Error deleting mask image from KV:", deleteError);
                         }
