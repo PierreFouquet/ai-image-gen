@@ -156,7 +156,9 @@ generateBtn.addEventListener('click', async () => {
                 img.alt = 'Previous Generated Image';
                 previousImagesContainer.appendChild(img);
 
-                loadPreviousImages();  // Refresh thumbnails
+                console.log('Thumbnail added:', img.src); // Debugging
+
+                // loadPreviousImages();  // Refresh thumbnails - REMOVE THIS LINE
             };
         }
     } catch (err) {
@@ -185,6 +187,8 @@ async function loadPreviousImages() {
         } else {
             previousImagesContainer.innerHTML = '<p>No previous images available.</p>';
         }
+
+        console.log('Previous images loaded.'); // Debugging
     } catch (err) {
         console.error('Failed to fetch previous images:', err);
         previousImagesContainer.innerHTML = '<p>Error loading previous images.</p>';
