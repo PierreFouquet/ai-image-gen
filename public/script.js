@@ -152,13 +152,12 @@ generateBtn.addEventListener('click', async () => {
 
                 // Add the newly generated image to the previous images section
                 const img = document.createElement('img');
-                img.src = data.imageUrl + '?width=100&height=auto';  // Add sizing parameters
+                img.src = data.imageUrl + '?width=100&height=auto'; // Add sizing parameters
                 img.alt = 'Previous Generated Image';
+                img.classList.add('previous-image'); // Add a class for styling/events
                 previousImagesContainer.appendChild(img);
 
                 console.log('Thumbnail added:', img.src); // Debugging
-
-                // loadPreviousImages();  // Refresh thumbnails - REMOVE THIS LINE
             };
         }
     } catch (err) {
@@ -168,6 +167,12 @@ generateBtn.addEventListener('click', async () => {
     }
 });
 
+const modal = document.getElementById('image-modal');
+const modalImage = document.getElementById('modal-image');
+const closeBtn = document.querySelector('.close');
+const downloadLink = document.getElementById('download-link');
+const previousImagesContainer = document.getElementById('previous-images');
+
 // Fetch and display previous images
 async function loadPreviousImages() {
     try {
@@ -175,28 +180,46 @@ async function loadPreviousImages() {
         if (!response.ok) throw new Error('Failed to load previous images');
 
         const data = await response.json();
-        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>';  // Ensure header is present
+        const previousImagesContainer = document.getElementById('previous-images');
+        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>'; // Keep the heading
 
         if (data.keys && data.keys.length > 0) {
             data.keys.forEach(key => {
                 const img = document.createElement('img');
                 img.src = `https://pub-8fa64dd4c5d8443db9d65e5e84df9c35.r2.dev/${key}?width=100&height=auto`;
                 img.alt = 'Previous Generated Image';
+                img.classList.add('previous-image'); // Add a class for styling/events
                 previousImagesContainer.appendChild(img);
             });
         } else {
-            previousImagesContainer.innerHTML = '<p>No previous images available.</p>';
+            previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>No previous images available.</p>'; //Add heading
         }
-
-        console.log('Previous images loaded.'); // Debugging
     } catch (err) {
         console.error('Failed to fetch previous images:', err);
-        previousImagesContainer.innerHTML = '<p>Error loading previous images.</p>';
+        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>Error loading previous images.</p>'; // Add heading
+    }
+}
+
+// Add event listener to previous images container
+previousImagesContainer.addEventListener('click', (event) => {
+    if (event.target.tagName === 'IMG' && event.target.classList.contains('previous-image')) {
+        modal.style.display = 'block';
+        modalImage.src = event.target.src.split('?')[0]; // Get full-size URL
+        downloadLink.href = event.target.src.split('?')[0];
+        downloadLink.download = 'generated_image.png'; // Default filename
+    }
+});
+
+// Close the modal
+closeBtn.onclick = function () {
+    modal.style.display = 'none';
+}
+
+window.onclick = function (event) {
+    if (event.target == modal) {
+        modal.style.display = 'none';
     }
 }
 
 // Load previous images when the page loads
-window.addEventListener('load', () => {
-    previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>'; // Initial header
-    loadPreviousImages();
-});
+window.addEventListener('load', loadPreviousImages);

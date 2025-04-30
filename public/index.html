@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Image Generator</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="container">
         <h1>Generate AI Image</h1>
@@ -24,11 +26,13 @@
             <div id="upload-loading">Uploading...</div>
             <div id="uploaded-image-display">
                 <div id="base-image-preview">
-                    <img id="uploaded-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="Uploaded Image" style="display: none; max-width: 200px; max-height: 200px;">
+                    <img id="uploaded-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        alt="Uploaded Image" style="display: none; max-width: 200px; max-height: 200px;">
                     <p id="uploaded-key" style="display: none;">Base Image Key: <span id="key-value"></span></p>
                 </div>
                 <div id="mask-image-preview">
-                    <img id="uploaded-mask-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="Uploaded Mask" style="display: none; max-width: 200px; max-height: 200px;">
+                    <img id="uploaded-mask-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        alt="Uploaded Mask" style="display: none; max-width: 200px; max-height: 200px;">
                     <p id="uploaded-mask-key" style="display: none;">Mask Image Key: <span id="mask-key-value"></span></p>
                 </div>
             </div>
@@ -48,7 +52,8 @@
                     <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning</option>
                     <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell</option>
                     <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img</option>
-                    <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM - (Creative and artistic image generation)</option>
+                    <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM - (Creative and artistic image
+                        generation)</option>
                 </select>
             </div>
             <button id="generate-btn">Generate Image</button>
@@ -62,7 +67,15 @@
         <div id="previous-images">
             <h2>Previous Images (Current Session)</h2>
         </div>
+
+        <div id="image-modal" class="modal">
+            <span class="close">&times;</span>
+            <img class="modal-content" id="modal-image">
+            <a id="download-link" class="download-button" download>Download</a>
+        </div>
     </div>
+
     <script src="script.js"></script>
 </body>
+
 </html>
