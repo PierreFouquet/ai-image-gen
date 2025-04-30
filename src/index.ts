@@ -5,7 +5,7 @@ interface Env {
     ASSETS: Fetcher;
     IMAGE_STORE: KVNamespace; // Still used for uploaded images
     IMAGE_BUCKET: R2Bucket;      // R2 bucket for generated images
-    IMAGE_LOG: KVNamespace;       // KV for logging generated image keys (per session)
+    IMAGE_LOG: KVNamespace;          // KV for logging generated image keys (per session)
 }
 
 const validAiModels = [
