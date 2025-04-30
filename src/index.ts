@@ -56,16 +56,26 @@ export default {
             try {
                 const formData = await request.formData();
                 const imageFile = formData.get("image") as File;
-                if (!imageFile) {
-                    return new Response("No image file provided", { status: 400 });
+                const maskFile = formData.get("mask") as File;
+                const responseData: Record<string, string> = {};
+
+                if (imageFile) {
+                    const arrayBuffer = await imageFile.arrayBuffer();
+                    const imageKey = crypto.randomUUID();
+                    await env.IMAGE_STORE.put(imageKey, arrayBuffer);
+                    console.log(`/upload: Base image stored in KV with key: ${imageKey}, size: ${arrayBuffer.byteLength} bytes`);
+                    responseData.imageKey = imageKey;
                 }
-                const arrayBuffer = await imageFile.arrayBuffer();
-                const imageKey = crypto.randomUUID();
-                await env.IMAGE_STORE.put(imageKey, arrayBuffer);
-                console.log(
-                    `/upload: Image stored in KV with key: ${imageKey}, size: ${arrayBuffer.byteLength} bytes`
-                );
-                return new Response(JSON.stringify({ key: imageKey }), {
+
+                if (maskFile) {
+                    const arrayBuffer = await maskFile.arrayBuffer();
+                    const maskKey = crypto.randomUUID();
+                    await env.IMAGE_STORE.put(maskKey, arrayBuffer);
+                    console.log(`/upload: Mask image stored in KV with key: ${maskKey}, size: ${arrayBuffer.byteLength} bytes`);
+                    responseData.maskKey = maskKey;
+                }
+
+                return new Response(JSON.stringify(responseData), {
                     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
                 });
             } catch (error) {
@@ -76,10 +86,11 @@ export default {
 
         if (url.pathname === "/generate" && request.method === "POST") {
             try {
-                const { prompt, model, imageKey } = await request.json<{
+                const { prompt, model, imageKey, maskKey } = await request.json<{
                     prompt?: string;
                     model?: string;
                     imageKey?: string;
+                    maskKey?: string;
                 }>();
 
                 if (!model) return new Response("Missing 'model' in request body", { status: 400 });
@@ -93,6 +104,7 @@ export default {
                 };
 
                 let imageData: ArrayBuffer | null = null;
+                let maskData: ArrayBuffer | null = null;
 
                 if (
                     safeModel === "@cf/runwayml/stable-diffusion-v1-5-img2img" ||
@@ -114,14 +126,31 @@ export default {
                             });
                         }
                         imageData = storedImage;
-                        // Convert ArrayBuffer to Uint8Array, then to a regular Array of numbers
-                        const uint8Array = new Uint8Array(imageData);
-                        inputs.image = Array.from(uint8Array);
+                        inputs.image = Array.from(new Uint8Array(imageData));
                         inputs.num_inference_steps = 50;
                         inputs.guidance_scale = 7.5;
+
+                        if (safeModel === "@cf/stabilityai/stable-diffusion-v1-5-inpainting") {
+                            if (!maskKey) {
+                                return new Response(
+                                    "Missing 'maskKey' in request body for inpainting model",
+                                    { status: 400 }
+                                );
+                            }
+                            const storedMask = await env.IMAGE_STORE.get(maskKey, {
+                                type: "arrayBuffer",
+                            });
+                            if (!storedMask) {
+                                return new Response("Mask image not found in storage", {
+                                    status: 404,
+                                });
+                            }
+                            maskData = storedMask;
+                            inputs.mask = Array.from(new Uint8Array(maskData));
+                        }
                     } catch (kvError) {
-                        console.error("Error retrieving image from KV:", kvError);
-                        return new Response("Error retrieving image from storage", {
+                        console.error("Error retrieving image(s) from KV:", kvError);
+                        return new Response("Error retrieving image(s) from storage", {
                             status: 500,
                         });
                     }
@@ -183,10 +212,20 @@ export default {
                         try {
                             await env.IMAGE_STORE.delete(imageKey);
                             console.log(
-                                `/generate: Image with key ${imageKey} deleted from KV`
+                                `/generate: Base image with key ${imageKey} deleted from KV`
                             );
                         } catch (deleteError) {
-                            console.error("Error deleting image from KV:", deleteError);
+                            console.error("Error deleting base image from KV:", deleteError);
+                        }
+                    }
+                    if (maskKey) {
+                        try {
+                            await env.IMAGE_STORE.delete(maskKey);
+                            console.log(
+                                `/generate: Mask image with key ${maskKey} deleted from KV`
+                            );
+                        } catch (deleteError) {
+                            console.error("Error deleting mask image from KV:", deleteError);
                         }
                     }
                 }
