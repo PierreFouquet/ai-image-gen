@@ -1,4 +1,3 @@
-// index.ts
 import { ImageObject } from "./imageObject"; // Import the Durable Object class
 
 interface Env {
@@ -10,7 +9,7 @@ interface Env {
 
 async function storeImageInR2(env: Env, image: ArrayBuffer, key: string): Promise<string> {
   const r2ObjectKey = `images/${key}`; // Customize your R2 object key
-  await env.IMAGE_BUCKET.put(r2ObjectKey, image);
+  await env.IMAGE_BUCKET.put(key, image);
   return r2ObjectKey;
 }
 
@@ -139,3 +138,5 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+export { ImageObject }; // Export the Durable Object class
