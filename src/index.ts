@@ -1,99 +1,135 @@
-<!DOCTYPE html>
-<html lang="en">
+import { Ai } from '@cloudflare/ai';
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Generator</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+interface Env {
+    AI: Ai;
+    ASSETS: Fetcher;
+    IMAGE_STORE: KVNamespace; // Add KV Namespace binding
+    IMAGE_BUCKET: R2Bucket; // Add R2 Bucket binding
+}
 
-<body>
-    <div class="container">
-        <h1>Generate AI Image</h1>
-        <div class="input-group">
-            <label for="prompt">Prompt:</label>
-            <input type="text" id="prompt" placeholder="Enter your image prompt">
-        </div>
-        <div class="input-group">
-            <label for="model">Select Model:</label>
-            <select id="model">
-                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0</option>
-                <option value="@cf/stabilityai/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting</option>
-                <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning</option>
-                <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell</option>
-                <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img</option>
-                <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM</option>
-            </select>
-        </div>
-        <button id="generate-btn">Generate</button>
-        <div id="image-display">
-            <img id="generated-image" style="display: none;">
-            <div id="loading-indicator">Generating...</div>
-        </div>
-    </div>
-    <script>
-        const generateBtn = document.getElementById('generate-btn');
-        const promptInput = document.getElementById('prompt');
-        const modelSelect = document.getElementById('model');
-        const generatedImage = document.getElementById('generated-image');
-        const imageDisplay = document.getElementById('image-display');
-        const loadingIndicator = document.getElementById('loading-indicator');
+async function storeImageInR2(env: Env, image: ArrayBuffer, key: string): Promise<string> {
+    const r2ObjectKey = `images/${key}`; // Customize your R2 object key
+    await env.IMAGE_BUCKET.put(r2ObjectKey, image);
+    return r2ObjectKey;
+}
 
-        generateBtn.addEventListener('click', async () => {
-            const prompt = promptInput.value;
-            const model = modelSelect.value;
+async function storeImageMetadataInKV(env: Env, imageKey: string, r2ObjectKey: string): Promise<void> {
+    await env.IMAGE_STORE.put(imageKey, JSON.stringify({ r2_object_key: r2ObjectKey }));
+}
 
-            if (!prompt) {
-                alert('Please enter a prompt.');
-                return;
-            }
+async function getImageMetadataFromKV(env: Env, imageKey: string): Promise<{ r2_object_key: string } | null> {
+    const metadata = await env.IMAGE_STORE.get(imageKey);
+    if (metadata) {
+        return JSON.parse(metadata) as { r2_object_key: string };
+    }
+    return null;
+}
 
-            loadingIndicator.style.display = 'block';
-            imageDisplay.style.backgroundColor = '#f0f0f0'; // Show loading state
+export default {
+    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+        const url = new URL(request.url);
 
+        console.log("Worker received request:", request.url, request.method);
+
+        if (url.pathname === "/generate" && request.method === "POST") {
+            console.log("Handling /generate POST request");
             try {
-                const workerUrl = '/generate';  // Worker endpoint
-                const response = await fetch(workerUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        model: model
-                    }), // Pass model and prompt in body
-                });
+                const { prompt, model } = await request.json<{ prompt?: string; model?: string }>();
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                console.log("Request body:", { prompt, model });
+
+                if (!prompt) {
+                    console.error("Missing 'prompt' in request body");
+                    return new Response("Missing 'prompt' in request body", { status: 400 });
+                }
+                if (!model) {
+                    console.error("Missing 'model' in request body");
+                    return new Response("Missing 'model' in request body", { status: 400 });
                 }
 
-                const data = await response.json();
-                const imageKey = data.imageKey;
+                console.log(`Generating image with model: <span class="math-inline">\{model\}, prompt\: "</span>{prompt}"`);
 
-                // Fetch the image using the imageKey
-                const imageResponse = await fetch(`/get-image?imageKey=${imageKey}`);
-                if (!imageResponse.ok) {
-                    throw new Error(`HTTP error! status: ${imageResponse.status}, message: ${await imageResponse.text()}`);
+                const inputs = { prompt: prompt };
+
+                try {
+                    const aiResponse = await env.AI.run(model, inputs);
+                    console.log("AI response (raw):", aiResponse);
+
+                    let r2ObjectKey: string | undefined;
+
+                    if (aiResponse instanceof ArrayBuffer) {
+                        const imageKey = crypto.randomUUID();
+                        r2ObjectKey = await storeImageInR2(env, aiResponse, imageKey);
+                        await storeImageMetadataInKV(env, imageKey, r2ObjectKey); // Store metadata in KV
+
+                        return new Response(JSON.stringify({ imageKey }), { // Return imageKey instead of R2 key
+                            headers: { 'Content-Type': 'application/json' },
+                        });
+                    } else if (model === "@cf/black-forest-labs/flux-1-schnell" && aiResponse && typeof aiResponse.image === 'string') {
+                        // Convert base64 to binary
+                        const binaryString = atob(aiResponse.image);
+                        const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
+                        const arrayBuffer = img.buffer;
+
+                        const imageKey = crypto.randomUUID();
+                        r2ObjectKey = await storeImageInR2(env, arrayBuffer, imageKey);
+                        await storeImageMetadataInKV(env, imageKey, r2ObjectKey);
+
+                        return new Response(JSON.stringify({ imageKey }), {
+                            headers: { 'Content-Type': 'application/json' },
+                        });
+                    } else {
+                        console.error("Unexpected AI response format:", aiResponse);
+                        return new Response("Error generating image: Unexpected response format", { status: 500 });
+                    }
+                } catch (aiError) {
+                    console.error("Error during AI.run:", aiError);
+                    const aiErrorMessage = aiError instanceof Error ? aiError.message : String(aiError);
+                    return new Response(`Error generating image: ${aiErrorMessage}`, { status: 500 });
                 }
-                const imageBlob = await imageResponse.blob();
-                const imageUrl = URL.createObjectURL(imageBlob);
-
-                generatedImage.src = imageUrl;
-                generatedImage.style.display = 'block';
-                imageDisplay.style.backgroundColor = 'transparent';
-
-            } catch (error) {
-                console.error('Error generating image:', error);
-                imageDisplay.innerHTML = `<p style="color: red;">Error generating image: ${error.message}</p>`;
-                imageDisplay.style.backgroundColor = '#ffe9e9';
-            } finally {
-                loadingIndicator.style.display = 'none';
+            } catch (e) {
+                console.error("Error during /generate handling:", e);
+                const errorMessage = e instanceof Error ? e.message : String(e);
+                return new Response(`Error generating image: ${errorMessage}`, { status: 500 });
             }
-        });
-    </script>
-</body>
+        }
 
-</html>
+        if (url.pathname === "/get-image" && request.method === "GET") {
+            try {
+                const imageKey = url.searchParams.get("imageKey");
+                if (!imageKey) {
+                    return new Response("Missing 'imageKey' in query", { status: 400 });
+                }
+
+                const metadata = await getImageMetadataFromKV(env, imageKey);
+                if (!metadata) {
+                    return new Response("Image metadata not found", { status: 404 });
+                }
+
+                const object = await env.IMAGE_BUCKET.get(metadata.r2_object_key);
+                if (!object) {
+                    return new Response("Image not found in R2", { status: 404 });
+                }
+                const arrayBuffer = await object.arrayBuffer();
+                return new Response(arrayBuffer, { headers: { 'Content-Type': 'image/png' } });
+            } catch (error) {
+                console.error("Error during /get-image handling:", error);
+                return new Response("Error retrieving image", { status: 500 });
+            }
+        }
+
+        // --- Static Asset Serving ---
+        if (env.ASSETS) {
+            try {
+                console.log("Serving static asset via ASSETS:", request.url);
+                return await env.ASSETS.fetch(request);
+            } catch (e) {
+                console.error("Error fetching asset via ASSETS:", e);
+                return new Response("Internal Server Error", { status: 500 });
+            }
+        } else {
+            console.error("ASSETS binding is undefined!");
+            return new Response("Internal Server Error: ASSETS binding missing", { status: 500 });
+        }
+    },
+} satisfies ExportedHandler<Env>;
