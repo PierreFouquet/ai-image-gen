@@ -87,6 +87,7 @@ button:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: center;
 }
 
 #previous-images img {
@@ -94,27 +95,20 @@ button:hover {
     height: auto;
     border: 1px solid #ccc;
     cursor: pointer;
+    transition: transform 0.3s ease;
 }
 
-#uploaded-img, #uploaded-mask-img {
-    max-width: 200px;
-    max-height: 200px;
-    display: block;
-    margin: 0 auto;
+#previous-images img:hover {
+    transform: scale(1.1);
+    border-color: #007bff;
 }
 
-@media (max-width: 600px) {
-    .container {
-        padding: 15px;
-    }
-
-    #uploaded-img, #uploaded-mask-img {
-        max-width: 150px;
-    }
-
-    #image-display {
-        min-height: 150px;
-    }
+#generated-image {
+    max-width: 100%;
+    height: auto;
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
 }
 
 /* Loading spinner styling (Optional) */
