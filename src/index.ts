@@ -3,7 +3,9 @@ import { Ai } from '@cloudflare/ai';
 interface Env {
     AI: Ai;
     ASSETS: Fetcher;
-    IMAGE_STORE: KVNamespace;
+    IMAGE_STORE: KVNamespace; // Still used for uploaded images
+    IMAGE_BUCKET: R2Bucket;    // R2 bucket for generated images
+    IMAGE_LOG: KVNamespace;     // KV for logging generated image keys (per session)
 }
 
 const validAiModels = [
@@ -156,13 +158,14 @@ export default {
                     }
                 }
 
+                let generatedImageBuffer: ArrayBuffer | null = null;
+                let contentType = "image/png";
+
                 try {
                     const aiResponse = (await env.AI.run(
                         safeModel,
                         inputs
                     )) as AiResponse;
-
-                    console.log("Raw AI Response:", aiResponse);
 
                     if (
                         safeModel === "@cf/black-forest-labs/flux-1-schnell" &&
@@ -170,30 +173,13 @@ export default {
                         "image" in aiResponse
                     ) {
                         const binaryString = atob(aiResponse.image);
-                        const img = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) {
-                            img[i] = binaryString.charCodeAt(i);
-                        }
-                        return new Response(img, { headers: { "Content-Type": "image/jpeg", "Access-Control-Allow-Origin": "*" } });
+                        generatedImageBuffer = new Uint8Array(binaryString.length).map((_, i) => binaryString.charCodeAt(i)).buffer;
+                        contentType = "image/jpeg";
                     } else if (aiResponse instanceof ReadableStream) {
-                        console.log("Handling ReadableStream response");
-                        try {
-                            const arrayBuffer = await streamToArrayBuffer(aiResponse);
-                            console.log("Stream converted to ArrayBuffer:", arrayBuffer.byteLength, "bytes");
-                            return new Response(arrayBuffer, {
-                                headers: {
-                                    "Content-Type": "image/*",
-                                    "Access-Control-Allow-Origin": "*",
-                                    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-                                    "Access-Control-Allow-Headers": "Content-Type",
-                                },
-                            });
-                        } catch (streamError) {
-                            console.error("Error converting stream to ArrayBuffer:", streamError);
-                            return new Response("Error processing image stream", { status: 500 });
-                        }
+                        generatedImageBuffer = await streamToArrayBuffer(aiResponse);
+                        contentType = "image/*"; // Adjust as needed
                     } else if (aiResponse instanceof ArrayBuffer) {
-                        return new Response(aiResponse, { headers: { "Content-Type": "image/png", "Access-Control-Allow-Origin": "*" } });
+                        generatedImageBuffer = aiResponse;
                     } else {
                         console.error("Unexpected AI response format:", aiResponse);
                         return new Response(
@@ -201,37 +187,53 @@ export default {
                             { status: 500 }
                         );
                     }
+
+                    if (generatedImageBuffer) {
+                        const timestamp = Date.now();
+                        const objectKey = `generated/${timestamp}/${crypto.randomUUID()}.png`; // Example key
+                        await env.IMAGE_BUCKET.put(objectKey, generatedImageBuffer, {
+                            httpMetadata: { contentType },
+                            customMetadata: { created: String(timestamp) }, // For potential lifecycle rules
+                        });
+
+                        // Basic logging by (potential) session ID
+                        const sessionId = request.headers.get('cf-ray') || 'unknown'; // Example - CF-Ray is per request
+                        const logEntry = JSON.stringify({ key: objectKey, timestamp });
+                        await env.IMAGE_LOG.put(sessionId, (await env.IMAGE_LOG.get(sessionId) || '') + logEntry + '\n');
+
+                        return new Response(generatedImageBuffer, {
+                            headers: { "Content-Type": contentType, "Access-Control-Allow-Origin": "*" },
+                        });
+                    } else {
+                        return new Response("Error generating image: No image data received", { status: 500 });
+                    }
+
                 } catch (aiError) {
                     console.error("Error during AI.run:", aiError);
-                    const aiErrorMessage = aiError instanceof Error ? aiError.message : String(aiError);
-                    return new Response(`Error generating image: ${aiErrorMessage}`, {
-                        status: 500,
-                    });
+                    return new Response(`Error generating image: ${aiError}`, { status: 500 });
                 } finally {
-                    // Delete the images after successful generation if the model is NOT img2img or inpainting
-                    if (imageKey && safeModel !== "@cf/runwayml/stable-diffusion-v1-5-img2img" && safeModel !== "@cf/runwayml/stable-diffusion-v1-5-inpainting") {
+                    // Clean up uploaded images from KV after generation (for all models now)
+                    if (imageKey) {
                         try {
                             await env.IMAGE_STORE.delete(imageKey);
-                            console.log(`/generate: Base image with key ${imageKey} deleted from KV`);
-                        } catch (deleteError) {
-                            console.error("Error deleting base image from KV:", deleteError);
+                            console.log(`/generate: Base image ${imageKey} deleted from KV`);
+                        } catch (e) {
+                            console.error("KV delete error:", e);
                         }
                     }
-                    if (maskKey && safeModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting") {
+                    if (maskKey) {
                         try {
                             await env.IMAGE_STORE.delete(maskKey);
-                            console.log(`/generate: Mask image with key ${maskKey} deleted from KV`);
-                        } catch (deleteError) {
-                            console.error("Error deleting mask image from KV:", deleteError);
+                            console.log(`/generate: Mask image ${maskKey} deleted from KV`);
+                        } catch (e) {
+                            console.error("KV delete error:", e);
                         }
                     }
                 }
+
             } catch (e) {
                 console.error("Error during /generate handling:", e);
-                const errorMessage = e instanceof Error ? e.message : String(e);
-                return new Response(`Error generating image: ${errorMessage}`, {
-                    status: 500,
-                });
+                return new Response(`Error generating image: ${e}`, { status: 500 });
             }
         }
 
