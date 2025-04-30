@@ -1,142 +1,99 @@
-import { ImageObject } from "./ImageObject.ts";
+<!DOCTYPE html>
+<html lang="en">
 
-interface Env {
-  AI: Ai;
-  ASSETS: Fetcher;
-  IMAGE_OBJECTS: DurableObjectNamespace;
-  IMAGE_BUCKET: R2Bucket; //  R2 Bucket binding
-}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 
-async function storeImageInR2(env: Env, image: ArrayBuffer, key: string): Promise<string> {
-  const r2ObjectKey = `images/${key}`; // Customize your R2 object key
-  await env.IMAGE_BUCKET.put(key, image);
-  return r2ObjectKey;
-}
+<body>
+    <div class="container">
+        <h1>Generate AI Image</h1>
+        <div class="input-group">
+            <label for="prompt">Prompt:</label>
+            <input type="text" id="prompt" placeholder="Enter your image prompt">
+        </div>
+        <div class="input-group">
+            <label for="model">Select Model:</label>
+            <select id="model">
+                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0</option>
+                <option value="@cf/stabilityai/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting</option>
+                <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning</option>
+                <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell</option>
+                <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img</option>
+                <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM</option>
+            </select>
+        </div>
+        <button id="generate-btn">Generate</button>
+        <div id="image-display">
+            <img id="generated-image" style="display: none;">
+            <div id="loading-indicator">Generating...</div>
+        </div>
+    </div>
+    <script>
+        const generateBtn = document.getElementById('generate-btn');
+        const promptInput = document.getElementById('prompt');
+        const modelSelect = document.getElementById('model');
+        const generatedImage = document.getElementById('generated-image');
+        const imageDisplay = document.getElementById('image-display');
+        const loadingIndicator = document.getElementById('loading-indicator');
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
+        generateBtn.addEventListener('click', async () => {
+            const prompt = promptInput.value;
+            const model = modelSelect.value;
 
-    if (url.pathname === "/upload" && request.method === "POST") {
-      try {
-        const formData = await request.formData();
-        const imageFile = formData.get("image") as File;
+            if (!prompt) {
+                alert('Please enter a prompt.');
+                return;
+            }
 
-        if (!imageFile) {
-          return new Response("No image file provided", { status: 400 });
-        }
+            loadingIndicator.style.display = 'block';
+            imageDisplay.style.backgroundColor = '#f0f0f0'; // Show loading state
 
-        const arrayBuffer = await imageFile.arrayBuffer();
-        const doId = env.IMAGE_OBJECTS.newUniqueId(); // Get a new unique ID for the Durable Object
-        const doStub = env.IMAGE_OBJECTS.get(doId); // Get the Durable Object stub
+            try {
+                const workerUrl = '/generate';  // Worker endpoint
+                const response = await fetch(workerUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        model: model
+                    }), // Pass model and prompt in body
+                });
 
-        // Send the image data to the Durable Object for storage
-        await doStub.fetch(new Request("http://image-object/upload", { method: "PUT", body: arrayBuffer }));
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
 
-        return new Response(JSON.stringify({ durableObjectId: doId.toString() }), {
-          headers: { "Content-Type": "application/json" },
+                const data = await response.json();
+                const imageKey = data.imageKey;
+
+                // Fetch the image using the imageKey
+                const imageResponse = await fetch(`/get-image?imageKey=${imageKey}`);
+                if (!imageResponse.ok) {
+                    throw new Error(`HTTP error! status: ${imageResponse.status}, message: ${await imageResponse.text()}`);
+                }
+                const imageBlob = await imageResponse.blob();
+                const imageUrl = URL.createObjectURL(imageBlob);
+
+                generatedImage.src = imageUrl;
+                generatedImage.style.display = 'block';
+                imageDisplay.style.backgroundColor = 'transparent';
+
+            } catch (error) {
+                console.error('Error generating image:', error);
+                imageDisplay.innerHTML = `<p style="color: red;">Error generating image: ${error.message}</p>`;
+                imageDisplay.style.backgroundColor = '#ffe9e9';
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
         });
-      } catch (error) {
-        console.error("Error handling image upload:", error);
-        return new Response("Error uploading image", { status: 500 });
-      }
-    }
+    </script>
+</body>
 
-    if (url.pathname === "/generate" && request.method === "POST") {
-      try {
-        const { prompt, model, durableObjectId } = await request.json<{
-          prompt?: string;
-          model?: string;
-          durableObjectId?: string;
-        }>();
-
-        if (!prompt) {
-          return new Response("Missing 'prompt' in request body", { status: 400 });
-        }
-        if (!model) {
-          return new Response("Missing 'model' in request body", { status: 400 });
-        }
-        if (!durableObjectId) {
-          return new Response("Missing 'durableObjectId' in request body", { status: 400 });
-        }
-
-        const doId = env.IMAGE_OBJECTS.idFromString(durableObjectId);
-        const doStub = env.IMAGE_OBJECTS.get(doId);
-
-        // Generate the image using the Durable Object
-        const generateResponse = await doStub.fetch(new Request("http://image-object/generate", {
-          method: "POST",
-          body: JSON.stringify({ prompt, model }),
-        }));
-
-        if (!generateResponse.ok) {
-          return new Response(`Error from Durable Object: ${await generateResponse.text()}`, {
-            status: generateResponse.status,
-          });
-        }
-
-        const { r2ObjectKey } = await generateResponse.json<{ r2ObjectKey: string }>();
-
-        return new Response(JSON.stringify({ r2ObjectKey }), {
-          headers: { "Content-Type": "application/json" },
-        });
-
-      } catch (e) {
-        console.error("Error during /generate handling:", e);
-        const errorMessage = e instanceof Error ? e.message : String(e);
-        return new Response(`Error generating image: ${errorMessage}`, { status: 500 });
-      }
-    }
-
-    if (url.pathname === "/get-image" && request.method === "GET") {
-      try {
-        const { durableObjectId, imageType } = url.searchParams.get("durableObjectId") as string;
-
-        if (!durableObjectId) {
-          return new Response("Missing 'durableObjectId' in query", { status: 400 });
-        }
-        if (!imageType || (imageType !== "original" && imageType !== "generated")) {
-          return new Response("Invalid or missing 'imageType' in query (must be 'original' or 'generated')", { status: 400 });
-        }
-
-        const doId = env.IMAGE_OBJECTS.idFromString(durableObjectId);
-        const doStub = env.IMAGE_OBJECTS.get(doId);
-
-        let imageResponse: Response;
-        if (imageType === "original") {
-          imageResponse = await doStub.fetch(new Request("http://image-object/get-original", { method: "GET" }));
-        } else {
-          imageResponse = await doStub.fetch(new Request("http://image-object/get-generated", { method: "GET" }));
-        }
-
-        if (!imageResponse.ok) {
-          return new Response(`Error retrieving ${imageType} image: ${await imageResponse.text()}`, {
-            status: imageResponse.status,
-          });
-        }
-
-        return new Response(imageResponse.body, { headers: { "Content-Type": "image/png" } }); // Or appropriate type
-
-      } catch (e) {
-        console.error("Error during /get-image handling:", e);
-        return new Response("Error retrieving image", { status: 500 });
-      }
-    }
-
-    // --- Static Asset Serving ---
-    if (env.ASSETS) {
-      try {
-        console.log("Serving static asset via ASSETS:", request.url);
-        return await env.ASSETS.fetch(request);
-      } catch (e) {
-        console.error("Error fetching asset via ASSETS:", e);
-        return new Response("Internal Server Error", { status: 500 });
-      }
-    } else {
-      console.error("ASSETS binding is undefined!");
-      return new Response("Internal Server Error: ASSETS binding missing", { status: 500 });
-    }
-  },
-} satisfies ExportedHandler<Env>;
-
-export { ImageObject };
+</html>
