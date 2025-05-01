@@ -190,7 +190,8 @@ const downloadLink = document.getElementById('download-link');
 
 async function loadPreviousImages() {
     const previousImagesContainer = document.getElementById('previous-images');
-    previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>'; // Reset the container
+    const noPreviousImages = document.getElementById('no-previous-images');
+    previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>';
 
     try {
         const response = await fetch('/session-images');
@@ -199,6 +200,7 @@ async function loadPreviousImages() {
         const data = await response.json();
 
         if (data.keys && data.keys.length > 0) {
+            noPreviousImages.style.display = 'none'; // Hide the "No previous images" message
             data.keys.forEach(key => {
                 const img = document.createElement('img');
                 img.src = `https://pub-8fa64dd4c5d8443db9d65e5e84df9c35.r2.dev/${key}?width=100&height=auto`;
@@ -207,15 +209,14 @@ async function loadPreviousImages() {
                 previousImagesContainer.appendChild(img);
             });
         } else {
-            const noImagesMessage = document.createElement('p');
-            noImagesMessage.textContent = 'No previous images available.';
-            previousImagesContainer.appendChild(noImagesMessage);
+            noPreviousImages.style.display = 'block'; // Ensure the message is shown if no images
         }
     } catch (err) {
         console.error('Failed to fetch previous images:', err);
         const errorMessage = document.createElement('p');
         errorMessage.textContent = 'Error loading previous images.';
         previousImagesContainer.appendChild(errorMessage);
+        noPreviousImages.style.display = 'none'; // Hide the default message on error too
     }
 }
 
