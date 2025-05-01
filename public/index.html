@@ -46,14 +46,14 @@
             </div>
             <div class="input-group">
                 <label for="model">Select Model:</label>
-                    <select id="model">
-                        <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0 - (Versatile model for high-quality image generation)</option>
-                        <option value="@cf/runwayml/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting - (Specialized for editing and repairing images)</option>
-                        <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning - (Optimized for fast image creation)</option>
-                        <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell - (Alternative for rapid image synthesis)</option>
-                        <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img - (Transforms images based on other images)</option>
-                        <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM - (Excels in creative and artistic imagery)</option>
-                    </select>
+                <select id="model">
+                    <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL Base 1.0 - (Versatile model for high-quality image generation)</option>
+                    <option value="@cf/runwayml/stable-diffusion-v1-5-inpainting">Stable Diffusion v1.5 Inpainting - (Specialized for editing and repairing images)</option>
+                    <option value="@cf/bytedance/stable-diffusion-xl-lightning">Stable Diffusion XL Lightning - (Optimized for fast image creation)</option>
+                    <option value="@cf/black-forest-labs/flux-1-schnell">Flux 1 Schnell - (Alternative for rapid image synthesis)</option>
+                    <option value="@cf/runwayml/stable-diffusion-v1-5-img2img">Stable Diffusion v1.5 Img2Img - (Transforms images based on other images)</option>
+                    <option value="@cf/lykon/dreamshaper-8-lcm">Dreamshaper 8 LCM - (Excels in creative and artistic imagery)</option>
+                </select>
             </div>
             <button id="generate-btn">Generate Image</button>
         </div>
@@ -66,6 +66,7 @@
 
         <div id="previous-images">
             <h2>Previous Images (Current Session)</h2>
+            <p id="no-previous-images">No previous images available.</p>
         </div>
 
         <div id="image-modal" class="modal">
