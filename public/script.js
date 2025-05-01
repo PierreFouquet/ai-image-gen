@@ -188,14 +188,14 @@ const modalImage = document.getElementById('modal-image');
 const closeBtn = document.querySelector('.close');
 const downloadLink = document.getElementById('download-link');
 
-// Fetch and display previous images
 async function loadPreviousImages() {
     try {
         const response = await fetch('/session-images');
         if (!response.ok) throw new Error('Failed to load previous images');
 
         const data = await response.json();
-        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>';
+        const previousImagesContainer = document.getElementById('previous-images');
+        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2>'; // Keep the heading
 
         if (data.keys && data.keys.length > 0) {
             data.keys.forEach(key => {
@@ -206,11 +206,11 @@ async function loadPreviousImages() {
                 previousImagesContainer.appendChild(img);
             });
         } else {
-            previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>No previous images available.</p>';
+            previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>No previous images available.</p>'; // Add heading
         }
     } catch (err) {
         console.error('Failed to fetch previous images:', err);
-        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>Error loading previous images.</p>';
+        previousImagesContainer.innerHTML = '<h2>Previous Images (Current Session)</h2><p>Error loading previous images.</p>'; // Add heading
     }
 }
 
