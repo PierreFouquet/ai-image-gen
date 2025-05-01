@@ -237,3 +237,9 @@ window.onclick = function(event) {
 
 // Load previous images when the page loads
 window.addEventListener('load', loadPreviousImages);
+
+// Force browser to display select options correctly
+window.addEventListener('load', () => {
+    const temp = modelSelect.innerHTML;
+    modelSelect.innerHTML = temp;
+});
